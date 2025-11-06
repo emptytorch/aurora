@@ -32,12 +32,25 @@ impl<'input> Lexer<'input> {
         self.bump();
 
         let kind = match first {
+            _ if first.is_ascii_digit() => self.integer(start),
             _ if first.is_alphabetic() || first == '_' => self.identifier(start),
             _ => return None,
         };
 
         let span = Span::new(start, self.pos);
         Some(Token::new(kind, span))
+    }
+
+    fn integer(&mut self, start: usize) -> TokenKind<'input> {
+        while let Some(ch) = self.first() {
+            if !ch.is_ascii_digit() {
+                break;
+            }
+            self.bump();
+        }
+
+        let text = &self.input[start..self.pos];
+        TokenKind::Integer(text)
     }
 
     fn identifier(&mut self, start: usize) -> TokenKind<'input> {
@@ -113,10 +126,23 @@ mod test {
     }
 
     #[test]
-    fn lexes_http_method_get() {
+    fn lex_http_method_get() {
         assert_token(
             "GET",
             Token::new(TokenKind::HttpMethod(HttpMethod::Get), Span::new(0, 3)),
+        );
+    }
+
+    #[test]
+    fn lex_integer_single_digit() {
+        assert_token("1", Token::new(TokenKind::Integer("1"), Span::new(0, 1)));
+    }
+
+    #[test]
+    fn lex_integer_multiple_digits() {
+        assert_token(
+            "123",
+            Token::new(TokenKind::Integer("123"), Span::new(0, 3)),
         );
     }
 

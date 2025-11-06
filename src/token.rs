@@ -4,6 +4,7 @@ use crate::span::Span;
 pub enum TokenKind<'input> {
     Identifier(&'input str),
     HttpMethod(HttpMethod),
+    Integer(&'input str),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
