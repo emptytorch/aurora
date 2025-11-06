@@ -1,3 +1,4 @@
+mod diagnostic;
 mod lexer;
 mod span;
 mod token;

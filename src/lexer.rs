@@ -1,9 +1,10 @@
 use crate::{
+    diagnostic::{Diagnostic, Level},
     span::Span,
     token::{HttpMethod, Token, TokenKind},
 };
 
-pub fn lex<'input>(input: &'input str) -> Vec<Token<'input>> {
+pub fn lex<'input>(input: &'input str) -> Result<Vec<Token<'input>>, Diagnostic> {
     let mut lexer = Lexer::new(input);
     lexer.lex()
 }
@@ -18,27 +19,37 @@ impl<'input> Lexer<'input> {
         Self { input, pos: 0 }
     }
 
-    fn lex(&mut self) -> Vec<Token<'input>> {
+    fn lex(&mut self) -> Result<Vec<Token<'input>>, Diagnostic> {
         let mut tokens = vec![];
-        while let Some(token) = self.next() {
+        while let Some(token) = self.next()? {
             tokens.push(token);
         }
-        tokens
+        Ok(tokens)
     }
 
-    fn next(&mut self) -> Option<Token<'input>> {
-        let first = self.first()?;
+    fn next(&mut self) -> Result<Option<Token<'input>>, Diagnostic> {
+        let Some(first) = self.first() else {
+            return Ok(None);
+        };
+
         let start = self.pos;
         self.bump();
 
         let kind = match first {
             _ if first.is_ascii_digit() => self.integer(start),
             _ if first.is_alphabetic() || first == '_' => self.identifier(start),
-            _ => return None,
+            _ => {
+                let span = Span::new(start, start);
+                return Err(Diagnostic::error("Unrecognized character", span).label(
+                    "I don't know what to do with this character",
+                    span,
+                    Level::Error,
+                ));
+            }
         };
 
         let span = Span::new(start, self.pos);
-        Some(Token::new(kind, span))
+        Ok(Some(Token::new(kind, span)))
     }
 
     fn integer(&mut self, start: usize) -> TokenKind<'input> {
@@ -151,7 +162,7 @@ mod test {
     }
 
     fn assert_tokens(input: &str, expected: &[Token]) {
-        let actual = lex(input);
+        let actual = lex(input).expect("Input should not result in an error");
         assert_eq!(actual.len(), expected.len());
         assert_eq!(actual, expected);
     }
