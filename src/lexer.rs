@@ -1,0 +1,132 @@
+use crate::{
+    span::Span,
+    token::{HttpMethod, Token, TokenKind},
+};
+
+pub fn lex<'input>(input: &'input str) -> Vec<Token<'input>> {
+    let mut lexer = Lexer::new(input);
+    lexer.lex()
+}
+
+struct Lexer<'input> {
+    input: &'input str,
+    pos: usize,
+}
+
+impl<'input> Lexer<'input> {
+    fn new(input: &'input str) -> Self {
+        Self { input, pos: 0 }
+    }
+
+    fn lex(&mut self) -> Vec<Token<'input>> {
+        let mut tokens = vec![];
+        while let Some(token) = self.next() {
+            tokens.push(token);
+        }
+        tokens
+    }
+
+    fn next(&mut self) -> Option<Token<'input>> {
+        let first = self.first()?;
+        let start = self.pos;
+        self.bump();
+
+        let kind = match first {
+            _ if first.is_alphabetic() || first == '_' => self.identifier(start),
+            _ => return None,
+        };
+
+        let span = Span::new(start, self.pos);
+        Some(Token::new(kind, span))
+    }
+
+    fn identifier(&mut self, start: usize) -> TokenKind<'input> {
+        while let Some(ch) = self.first() {
+            if !ch.is_alphanumeric() && ch != '_' {
+                break;
+            }
+            self.bump();
+        }
+
+        let text = &self.input[start..self.pos];
+        match text {
+            "GET" => TokenKind::HttpMethod(HttpMethod::Get),
+            _ => TokenKind::Identifier(text),
+        }
+    }
+
+    fn first(&mut self) -> Option<char> {
+        self.input[self.pos..].chars().next()
+    }
+
+    fn bump(&mut self) {
+        if let Some(ch) = self.first() {
+            self.pos += ch.len_utf8();
+        }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::span::Span;
+
+    use super::*;
+
+    #[test]
+    fn lex_identifier_simple() {
+        assert_token(
+            "foo",
+            Token::new(TokenKind::Identifier("foo"), Span::new(0, 3)),
+        );
+    }
+
+    #[test]
+    fn lex_identifier_with_underscore() {
+        assert_token(
+            "foo_bar",
+            Token::new(TokenKind::Identifier("foo_bar"), Span::new(0, 7)),
+        );
+    }
+
+    #[test]
+    fn lex_identifier_with_leading_underscore() {
+        assert_token(
+            "_foobar",
+            Token::new(TokenKind::Identifier("_foobar"), Span::new(0, 7)),
+        );
+    }
+
+    #[test]
+    fn lex_identifier_with_digits() {
+        assert_token(
+            "foo123",
+            Token::new(TokenKind::Identifier("foo123"), Span::new(0, 6)),
+        );
+    }
+
+    #[test]
+    fn lex_identifier_get() {
+        assert_token(
+            "get",
+            Token::new(TokenKind::Identifier("get"), Span::new(0, 3)),
+        );
+    }
+
+    #[test]
+    fn lexes_http_method_get() {
+        assert_token(
+            "GET",
+            Token::new(TokenKind::HttpMethod(HttpMethod::Get), Span::new(0, 3)),
+        );
+    }
+
+    fn assert_token(input: &str, expected: Token) {
+        assert_tokens(input, &[expected]);
+    }
+
+    fn assert_tokens(input: &str, expected: &[Token]) {
+        let actual = lex(input);
+        assert_eq!(actual.len(), expected.len());
+        assert_eq!(actual, expected);
+    }
+}
