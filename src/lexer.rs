@@ -21,13 +21,13 @@ impl<'input> Lexer<'input> {
 
     fn lex(&mut self) -> Result<Vec<Token<'input>>, Diagnostic> {
         let mut tokens = vec![];
-        while let Some(token) = self.next()? {
+        while let Some(token) = self.next_token()? {
             tokens.push(token);
         }
         Ok(tokens)
     }
 
-    fn next(&mut self) -> Result<Option<Token<'input>>, Diagnostic> {
+    fn next_token(&mut self) -> Result<Option<Token<'input>>, Diagnostic> {
         let Some(first) = self.first() else {
             return Ok(None);
         };
@@ -36,6 +36,7 @@ impl<'input> Lexer<'input> {
         self.bump();
 
         let kind = match first {
+            '"' => self.string(start)?,
             _ if first.is_ascii_digit() => self.integer(start),
             _ if first.is_alphabetic() || first == '_' => self.identifier(start),
             _ => {
@@ -50,6 +51,27 @@ impl<'input> Lexer<'input> {
 
         let span = Span::new(start, self.pos);
         Ok(Some(Token::new(kind, span)))
+    }
+
+    fn string(&mut self, start: usize) -> Result<TokenKind<'input>, Diagnostic> {
+        while let Some(ch) = self.next() {
+            if ch == '"' {
+                return Ok(TokenKind::String(&self.input[start..self.pos]));
+            }
+
+            if ch == '\\' {
+                self.bump();
+            }
+        }
+
+        let span = Span::new(start, self.pos);
+        Err(
+            Diagnostic::error("Unterminated string literal", span).label(
+                "I never found the closing quote for this string",
+                span,
+                Level::Error,
+            ),
+        )
     }
 
     fn integer(&mut self, start: usize) -> TokenKind<'input> {
@@ -83,10 +105,17 @@ impl<'input> Lexer<'input> {
         self.input[self.pos..].chars().next()
     }
 
-    fn bump(&mut self) {
+    fn next(&mut self) -> Option<char> {
         if let Some(ch) = self.first() {
             self.pos += ch.len_utf8();
+            Some(ch)
+        } else {
+            None
         }
+    }
+
+    fn bump(&mut self) {
+        _ = self.next();
     }
 }
 
@@ -154,6 +183,44 @@ mod test {
         assert_token(
             "123",
             Token::new(TokenKind::Integer("123"), Span::new(0, 3)),
+        );
+    }
+
+    #[test]
+    fn lex_string_empty() {
+        assert_token(
+            r#""""#,
+            Token::new(TokenKind::String(r#""""#), Span::new(0, 2)),
+        );
+    }
+
+    #[test]
+    fn lex_string_simple() {
+        assert_token(
+            r#""foo""#,
+            Token::new(TokenKind::String(r#""foo""#), Span::new(0, 5)),
+        );
+    }
+
+    #[test]
+    fn lex_string_escaped_quote() {
+        assert_token(
+            r#""foo \"bar\"!""#,
+            Token {
+                kind: TokenKind::String(r#""foo \"bar\"!""#),
+                span: Span::new(0, 14),
+            },
+        );
+    }
+
+    #[test]
+    fn lex_string_escaped_backslash() {
+        assert_token(
+            r#""foo\\bar""#,
+            Token {
+                kind: TokenKind::String(r#""foo\\bar""#),
+                span: Span::new(0, 10),
+            },
         );
     }
 

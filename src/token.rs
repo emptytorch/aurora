@@ -5,6 +5,7 @@ pub enum TokenKind<'input> {
     Identifier(&'input str),
     HttpMethod(HttpMethod),
     Integer(&'input str),
+    String(&'input str),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
