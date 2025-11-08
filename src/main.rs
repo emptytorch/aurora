@@ -1,3 +1,4 @@
+mod ast;
 mod diagnostic;
 mod lexer;
 mod span;
