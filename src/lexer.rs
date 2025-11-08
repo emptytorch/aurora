@@ -28,6 +28,7 @@ impl<'input> Lexer<'input> {
     }
 
     fn next_token(&mut self) -> Result<Option<Token<'input>>, Diagnostic> {
+        self.skip_whitespace();
         let Some(first) = self.first() else {
             return Ok(None);
         };
@@ -101,6 +102,15 @@ impl<'input> Lexer<'input> {
         match text {
             "GET" => TokenKind::HttpMethod(HttpMethod::Get),
             _ => TokenKind::Identifier(text),
+        }
+    }
+
+    fn skip_whitespace(&mut self) {
+        while let Some(ch) = self.first() {
+            if !ch.is_whitespace() {
+                break;
+            }
+            self.bump();
         }
     }
 
@@ -239,6 +249,20 @@ mod test {
         assert_token(
             "}",
             Token::new(TokenKind::CloseDelim(Delim::Brace), Span::new(0, 1)),
+        );
+    }
+
+    #[test]
+    fn lex_multiple_tokens_ignores_whitespace() {
+        assert_tokens(
+            r#"GET "example.com/"
+GET "example.com/""#,
+            &[
+                Token::new(TokenKind::HttpMethod(HttpMethod::Get), Span::new(0, 3)),
+                Token::new(TokenKind::String(r#""example.com/""#), Span::new(4, 18)),
+                Token::new(TokenKind::HttpMethod(HttpMethod::Get), Span::new(19, 22)),
+                Token::new(TokenKind::String(r#""example.com/""#), Span::new(23, 37)),
+            ],
         );
     }
 
