@@ -4,6 +4,7 @@ use crate::span::Span;
 pub enum TokenKind<'input> {
     Identifier(&'input str),
     HttpMethod(HttpMethod),
+    Keyword(Keyword),
     Integer(&'input str),
     String(&'input str),
     /// `:`
@@ -18,6 +19,12 @@ pub enum TokenKind<'input> {
 pub enum HttpMethod {
     /// `GET`
     Get,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Keyword {
+    /// `entry`
+    Entry,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

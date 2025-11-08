@@ -1,7 +1,7 @@
 use crate::{
     diagnostic::{Diagnostic, Level},
     span::Span,
-    token::{Delim, HttpMethod, Token, TokenKind},
+    token::{Delim, HttpMethod, Keyword, Token, TokenKind},
 };
 
 pub fn lex<'input>(input: &'input str) -> Result<Vec<Token<'input>>, Diagnostic> {
@@ -100,6 +100,7 @@ impl<'input> Lexer<'input> {
 
         let text = &self.input[start..self.pos];
         match text {
+            "entry" => TokenKind::Keyword(Keyword::Entry),
             "GET" => TokenKind::HttpMethod(HttpMethod::Get),
             _ => TokenKind::Identifier(text),
         }
@@ -134,7 +135,7 @@ impl<'input> Lexer<'input> {
 
 #[cfg(test)]
 mod test {
-    use crate::span::Span;
+    use crate::{span::Span, token::Keyword};
 
     use super::*;
 
@@ -183,6 +184,22 @@ mod test {
         assert_token(
             "GET",
             Token::new(TokenKind::HttpMethod(HttpMethod::Get), Span::new(0, 3)),
+        );
+    }
+
+    #[test]
+    fn lex_keyword_entry() {
+        assert_token(
+            "entry",
+            Token::new(TokenKind::Keyword(Keyword::Entry), Span::new(0, 5)),
+        );
+    }
+
+    #[test]
+    fn lex_identifier_entry() {
+        assert_token(
+            "Entry",
+            Token::new(TokenKind::Identifier("Entry"), Span::new(0, 5)),
         );
     }
 
