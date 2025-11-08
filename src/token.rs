@@ -6,11 +6,24 @@ pub enum TokenKind<'input> {
     HttpMethod(HttpMethod),
     Integer(&'input str),
     String(&'input str),
+    /// `:`
+    Colon,
+    /// E.g., `{`
+    OpenDelim(Delim),
+    /// E.g., `}`
+    CloseDelim(Delim),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum HttpMethod {
+    /// `GET`
     Get,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Delim {
+    /// `{` or `}`
+    Brace,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

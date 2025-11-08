@@ -1,7 +1,7 @@
 use crate::{
     diagnostic::{Diagnostic, Level},
     span::Span,
-    token::{HttpMethod, Token, TokenKind},
+    token::{Delim, HttpMethod, Token, TokenKind},
 };
 
 pub fn lex<'input>(input: &'input str) -> Result<Vec<Token<'input>>, Diagnostic> {
@@ -36,6 +36,9 @@ impl<'input> Lexer<'input> {
         self.bump();
 
         let kind = match first {
+            ':' => TokenKind::Colon,
+            '{' => TokenKind::OpenDelim(Delim::Brace),
+            '}' => TokenKind::CloseDelim(Delim::Brace),
             '"' => self.string(start)?,
             _ if first.is_ascii_digit() => self.integer(start),
             _ if first.is_alphabetic() || first == '_' => self.identifier(start),
@@ -206,10 +209,7 @@ mod test {
     fn lex_string_escaped_quote() {
         assert_token(
             r#""foo \"bar\"!""#,
-            Token {
-                kind: TokenKind::String(r#""foo \"bar\"!""#),
-                span: Span::new(0, 14),
-            },
+            Token::new(TokenKind::String(r#""foo \"bar\"!""#), Span::new(0, 14)),
         );
     }
 
@@ -217,10 +217,28 @@ mod test {
     fn lex_string_escaped_backslash() {
         assert_token(
             r#""foo\\bar""#,
-            Token {
-                kind: TokenKind::String(r#""foo\\bar""#),
-                span: Span::new(0, 10),
-            },
+            Token::new(TokenKind::String(r#""foo\\bar""#), Span::new(0, 10)),
+        );
+    }
+
+    #[test]
+    fn lex_colon() {
+        assert_token(":", Token::new(TokenKind::Colon, Span::new(0, 1)));
+    }
+
+    #[test]
+    fn lex_open_brace() {
+        assert_token(
+            "{",
+            Token::new(TokenKind::OpenDelim(Delim::Brace), Span::new(0, 1)),
+        );
+    }
+
+    #[test]
+    fn lex_close_brace() {
+        assert_token(
+            "}",
+            Token::new(TokenKind::CloseDelim(Delim::Brace), Span::new(0, 1)),
         );
     }
 
