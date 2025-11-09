@@ -1,4 +1,7 @@
-use crate::span::Span;
+use crate::{
+    span::Span,
+    token::{self, TokenKind},
+};
 
 #[derive(Debug, Clone)]
 pub struct Item<'input> {
@@ -38,7 +41,6 @@ pub struct Name<'input> {
 pub struct Request<'input> {
     pub method: HttpMethod,
     pub url: Expr<'input>,
-    pub span: Span,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
