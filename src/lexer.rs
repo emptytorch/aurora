@@ -38,8 +38,8 @@ impl<'input> Lexer<'input> {
 
         let kind = match first {
             ':' => TokenKind::Colon,
-            '{' => TokenKind::OpenDelim(Delim::Brace),
-            '}' => TokenKind::CloseDelim(Delim::Brace),
+            '{' => TokenKind::Delim(Delim::OpenBrace),
+            '}' => TokenKind::Delim(Delim::CloseBrace),
             '"' => self.string(start)?,
             _ if first.is_ascii_digit() => self.integer(start),
             _ if first.is_alphabetic() || first == '_' => self.identifier(start),
@@ -257,7 +257,7 @@ mod test {
     fn lex_open_brace() {
         assert_token(
             "{",
-            Token::new(TokenKind::OpenDelim(Delim::Brace), Span::new(0, 1)),
+            Token::new(TokenKind::Delim(Delim::OpenBrace), Span::new(0, 1)),
         );
     }
 
@@ -265,7 +265,7 @@ mod test {
     fn lex_close_brace() {
         assert_token(
             "}",
-            Token::new(TokenKind::CloseDelim(Delim::Brace), Span::new(0, 1)),
+            Token::new(TokenKind::Delim(Delim::CloseBrace), Span::new(0, 1)),
         );
     }
 
