@@ -1,7 +1,4 @@
-use crate::{
-    span::Span,
-    token::{self, TokenKind},
-};
+use crate::span::Span;
 
 #[derive(Debug, Clone)]
 pub struct Item<'input> {
