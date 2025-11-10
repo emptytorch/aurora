@@ -28,7 +28,7 @@ pub enum EntryItemKind<'input> {
     Request(Request<'input>),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct Name<'input> {
     pub text: &'input str,
     pub span: Span,
