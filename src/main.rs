@@ -1,9 +1,41 @@
+use std::path::PathBuf;
+
+use clap::{Parser, Subcommand};
+
 mod ast;
 mod diagnostic;
 mod lexer;
+mod machine;
+mod parser;
 mod span;
 mod token;
+mod validated;
+mod validator;
+mod value;
+
+#[derive(Parser)]
+struct Args {
+    #[command(subcommand)]
+    cmd: Command,
+}
+
+#[derive(Subcommand)]
+enum Command {
+    Run {
+        /// Path to the `.au` file to execute.
+        path: PathBuf,
+    },
+}
 
 fn main() {
-    println!("Hello, world!");
+    match Args::parse().cmd {
+        Command::Run { path } => {
+            let input = std::fs::read_to_string(path).expect("could not read .au file");
+            // TODO: pretty diagnostics
+            match machine::execute(&input) {
+                Ok(_) => {}
+                Err(e) => println!("{:?}", e),
+            }
+        }
+    }
 }
