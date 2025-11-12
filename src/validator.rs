@@ -3,6 +3,7 @@ use std::collections::{HashMap, hash_map};
 use crate::{
     ast,
     diagnostic::{Diagnostic, Level},
+    span::Span,
     validated::{self, Entry},
 };
 
@@ -91,11 +92,102 @@ fn validate_entry<'input>(
 fn validate_expr(expr: &ast::Expr) -> Result<validated::Expr, Diagnostic> {
     match expr.kind {
         ast::ExprKind::StringLiteral(s) => {
-            // TODO: escape sequences
+            let unescaped = unescape_string(s, expr.span)?;
             Ok(validated::Expr {
-                kind: validated::ExprKind::StringLiteral(s.replace('"', "")),
+                kind: validated::ExprKind::StringLiteral(unescaped),
                 ty: validated::Ty::String,
             })
         }
+    }
+}
+
+fn unescape_string(raw: &str, span: Span) -> Result<String, Diagnostic> {
+    let mut result = String::new();
+    let mut escape = false;
+    // Skip surrounding quotes
+    for (i, c) in raw[1..raw.len() - 1].char_indices() {
+        if escape {
+            let unescaped = match c {
+                'n' => '\n',
+                '\\' => '\\',
+                '"' => '"',
+                _ => {
+                    let absolute_index = span.start + 1 + i;
+                    let span = Span::new(absolute_index, absolute_index + c.len_utf8());
+                    return Err(
+                        Diagnostic::error(format!("Unknown character escape `{c}`"), span).label(
+                            "I don't know how to handle this character escape",
+                            span,
+                            Level::Error,
+                        ),
+                    );
+                }
+            };
+            result.push(unescaped);
+            escape = false;
+        } else if c == '\\' {
+            escape = true;
+        } else {
+            result.push(c);
+        }
+    }
+
+    Ok(result)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn unescape_ok(raw: &str) -> String {
+        unescape_string(raw, Span::new(0, raw.len())).expect("String should unescape successfully")
+    }
+
+    #[test]
+    fn unescape_string_simple() {
+        assert_eq!(unescape_ok(r#""foo""#), "foo");
+    }
+
+    #[test]
+    fn unescape_string_with_newline() {
+        assert_eq!(unescape_ok(r#""foo\nbar""#), "foo\nbar");
+    }
+
+    #[test]
+    fn unescape_string_with_quote() {
+        assert_eq!(unescape_ok(r#""foo\"bar\"""#), "foo\"bar\"");
+    }
+
+    #[test]
+    fn unescape_string_with_backslash() {
+        assert_eq!(unescape_ok(r#""foo\\bar""#), "foo\\bar");
+    }
+
+    #[test]
+    fn unescape_string_mixed() {
+        assert_eq!(
+            unescape_ok(r#""one\\two\nthree\"end\"""#),
+            "one\\two\nthree\"end\""
+        );
+    }
+
+    #[test]
+    fn unescape_string_invalid_escape_points_to_correct_span() {
+        let input = r#""foo\qbar""#;
+        let string_span = Span::new(0, 10);
+        let diagnostic =
+            unescape_string(input, string_span).expect_err("unknown character escape should fail");
+        let expected_span = Span::new(5, 6);
+
+        assert_eq!(diagnostic.span, expected_span);
+        assert_eq!(diagnostic.message, "Unknown character escape `q`");
+
+        assert_eq!(diagnostic.labels.len(), 1);
+        let label = &diagnostic.labels[0];
+        assert_eq!(label.span, expected_span);
+        assert_eq!(
+            label.message,
+            "I don't know how to handle this character escape"
+        );
     }
 }
