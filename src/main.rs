@@ -2,7 +2,7 @@ use std::path::{Path, PathBuf};
 
 use clap::{Parser, Subcommand};
 
-use crate::diagnostic::{Diagnostic, Level};
+use crate::diagnostic::Diagnostic;
 
 mod ast;
 mod diagnostic;
