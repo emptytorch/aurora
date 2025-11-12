@@ -56,10 +56,17 @@ fn validate_entry<'input>(
 
                 match validated_request {
                     Some(_) => {
-                        // TODO: label
                         return Err(Diagnostic::error(
                             format!("Entry `{}` contains multiple requests", entry.name.text),
                             item.span,
+                        )
+                        .label(
+                            format!(
+                                "I was expecting to find one request in entry `{}`",
+                                entry.name.text
+                            ),
+                            item.span,
+                            Level::Error,
                         ));
                     }
                     None => {
@@ -92,4 +99,3 @@ fn validate_expr(expr: &ast::Expr) -> Result<validated::Expr, Diagnostic> {
         }
     }
 }
-
