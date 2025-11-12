@@ -28,33 +28,40 @@ impl<'input> Lexer<'input> {
     }
 
     fn next_token(&mut self) -> Result<Option<Token<'input>>, Diagnostic> {
-        self.skip_whitespace();
-        let Some(first) = self.first() else {
-            return Ok(None);
-        };
-
-        let start = self.pos;
-        self.bump();
-
-        let kind = match first {
-            ':' => TokenKind::Colon,
-            '{' => TokenKind::Delim(Delim::OpenBrace),
-            '}' => TokenKind::Delim(Delim::CloseBrace),
-            '"' => self.string(start)?,
-            _ if first.is_ascii_digit() => self.integer(start),
-            _ if first.is_alphabetic() || first == '_' => self.identifier(start),
-            _ => {
-                let span = Span::new(start, start);
-                return Err(Diagnostic::error("Unrecognized character", span).label(
-                    "I don't know what to do with this character",
-                    span,
-                    Level::Error,
-                ));
+        loop {
+            self.skip_whitespace();
+            if Some('#') == self.first() {
+                self.skip_comment();
+                continue;
             }
-        };
 
-        let span = Span::new(start, self.pos);
-        Ok(Some(Token::new(kind, span)))
+            let Some(first) = self.first() else {
+                return Ok(None);
+            };
+
+            let start = self.pos;
+            self.bump();
+
+            let kind = match first {
+                ':' => TokenKind::Colon,
+                '{' => TokenKind::Delim(Delim::OpenBrace),
+                '}' => TokenKind::Delim(Delim::CloseBrace),
+                '"' => self.string(start)?,
+                _ if first.is_ascii_digit() => self.integer(start),
+                _ if first.is_alphabetic() || first == '_' => self.identifier(start),
+                _ => {
+                    let span = Span::new(start, start);
+                    return Err(Diagnostic::error("Unrecognized character", span).label(
+                        "I don't know what to do with this character",
+                        span,
+                        Level::Error,
+                    ));
+                }
+            };
+
+            let span = Span::new(start, self.pos);
+            return Ok(Some(Token::new(kind, span)));
+        }
     }
 
     fn string(&mut self, start: usize) -> Result<TokenKind<'input>, Diagnostic> {
@@ -112,6 +119,14 @@ impl<'input> Lexer<'input> {
                 break;
             }
             self.bump();
+        }
+    }
+
+    fn skip_comment(&mut self) {
+        while let Some(ch) = self.next() {
+            if ch == '\n' {
+                break;
+            }
         }
     }
 
@@ -279,6 +294,36 @@ GET "example.com/""#,
                 Token::new(TokenKind::String(r#""example.com/""#), Span::new(4, 18)),
                 Token::new(TokenKind::HttpMethod(HttpMethod::Get), Span::new(19, 22)),
                 Token::new(TokenKind::String(r#""example.com/""#), Span::new(23, 37)),
+            ],
+        );
+    }
+
+    #[test]
+    fn lex_skips_full_line_comment() {
+        assert_tokens(
+            r#"
+# This is a comment
+GET "example.com/""#,
+            &[
+                Token::new(TokenKind::HttpMethod(HttpMethod::Get), Span::new(21, 24)),
+                Token::new(TokenKind::String(r#""example.com/""#), Span::new(25, 39)),
+            ],
+        );
+    }
+
+    #[test]
+    fn lex_skips_multiple_comments_and_whitespace() {
+        assert_tokens(
+            r#"
+# comment 1
+# comment 2
+
+GET "example.com/"
+# comment 3
+"#,
+            &[
+                Token::new(TokenKind::HttpMethod(HttpMethod::Get), Span::new(26, 29)),
+                Token::new(TokenKind::String(r#""example.com/""#), Span::new(30, 44)),
             ],
         );
     }
