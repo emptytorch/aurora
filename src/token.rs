@@ -9,6 +9,8 @@ pub enum TokenKind<'input> {
     String(&'input str),
     /// `:`
     Colon,
+    /// `,`
+    Comma,
     /// E.g., `{`
     Delim(Delim),
 }
@@ -29,15 +31,21 @@ pub enum Keyword {
 pub enum Delim {
     /// `{`
     OpenBrace,
+    /// `[`
+    OpenBrack,
     /// `}`
     CloseBrace,
+    /// `]`
+    CloseBrack,
 }
 
 impl Delim {
     pub fn is_open(&self) -> bool {
         match self {
             Delim::OpenBrace => true,
+            Delim::OpenBrack => true,
             Delim::CloseBrace => false,
+            Delim::CloseBrack => false,
         }
     }
 }
@@ -46,7 +54,9 @@ impl std::fmt::Display for Delim {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Delim::OpenBrace => write!(f, "{{"),
+            Delim::OpenBrack => write!(f, "["),
             Delim::CloseBrace => write!(f, "}}"),
+            Delim::CloseBrack => write!(f, "]"),
         }
     }
 }

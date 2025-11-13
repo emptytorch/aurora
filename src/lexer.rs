@@ -44,8 +44,11 @@ impl<'input> Lexer<'input> {
 
             let kind = match first {
                 ':' => TokenKind::Colon,
+                ',' => TokenKind::Comma,
                 '{' => TokenKind::Delim(Delim::OpenBrace),
+                '[' => TokenKind::Delim(Delim::OpenBrack),
                 '}' => TokenKind::Delim(Delim::CloseBrace),
+                ']' => TokenKind::Delim(Delim::CloseBrack),
                 '"' => self.string(start)?,
                 _ if first.is_ascii_digit() => self.integer(start),
                 _ if first.is_alphabetic() || first == '_' => self.identifier(start),
@@ -269,6 +272,11 @@ mod test {
     }
 
     #[test]
+    fn lex_comma() {
+        assert_token(",", Token::new(TokenKind::Comma, Span::new(0, 1)));
+    }
+
+    #[test]
     fn lex_open_brace() {
         assert_token(
             "{",
@@ -277,10 +285,26 @@ mod test {
     }
 
     #[test]
+    fn lex_open_brack() {
+        assert_token(
+            "[",
+            Token::new(TokenKind::Delim(Delim::OpenBrack), Span::new(0, 1)),
+        );
+    }
+
+    #[test]
     fn lex_close_brace() {
         assert_token(
             "}",
             Token::new(TokenKind::Delim(Delim::CloseBrace), Span::new(0, 1)),
+        );
+    }
+
+    #[test]
+    fn lex_close_brack() {
+        assert_token(
+            "]",
+            Token::new(TokenKind::Delim(Delim::CloseBrack), Span::new(0, 1)),
         );
     }
 
