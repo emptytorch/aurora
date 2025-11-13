@@ -1,6 +1,7 @@
 use crate::{
     ast::{
-        Entry, EntryItem, EntryItemKind, Expr, ExprKind, HttpMethod, Item, ItemKind, Name, Request,
+        DictionaryField, Entry, EntryItem, EntryItemKind, Expr, ExprKind, HttpMethod, Item,
+        ItemKind, Name, Request,
     },
     diagnostic::{Diagnostic, Level},
     lexer,
@@ -87,6 +88,26 @@ impl<'input> Parser<'input> {
                     span: method_span.to(url_span),
                 }))
             }
+            Some(&Token {
+                kind: TokenKind::Delim(Delim::OpenBrack),
+                span: open_span,
+            }) => {
+                self.bump();
+                let name = self.parse_name().ok_or(
+                    Diagnostic::error("Expected identifier", self.peek_span()).label(
+                        "I was expecting a section name here",
+                        self.peek_span(),
+                        Level::Error,
+                    ),
+                )?;
+                _ = self.expect_delim(Delim::CloseBrack)?;
+                let body = self.parse_expr()?;
+                let span = open_span.to(body.span);
+                Ok(Some(EntryItem {
+                    kind: EntryItemKind::Section(name, body),
+                    span,
+                }))
+            }
             _ => Ok(None),
         }
     }
@@ -116,8 +137,79 @@ impl<'input> Parser<'input> {
                     span,
                 }))
             }
+            Some(&Token {
+                kind: TokenKind::Delim(Delim::OpenBrace),
+                span: open_span,
+            }) => {
+                self.bump();
+                let fields = self.parse_record_fields()?;
+                let close_span = self.expect_delim(Delim::CloseBrace)?;
+                let span = open_span.to(close_span);
+                Ok(Some(Expr {
+                    kind: ExprKind::Dictionary(fields),
+                    span,
+                }))
+            }
             _ => Ok(None),
         }
+    }
+
+    fn parse_record_fields(&mut self) -> Result<Vec<DictionaryField<'input>>, Diagnostic> {
+        let mut fields = vec![];
+
+        loop {
+            match self.peek() {
+                Some(Token {
+                    kind: TokenKind::Delim(Delim::CloseBrace),
+                    ..
+                })
+                | None => break,
+                _ => {}
+            }
+
+            let field = self.parse_record_field()?;
+            fields.push(field);
+
+            if self.eat(TokenKind::Comma).is_none() {
+                match self.peek() {
+                    Some(Token {
+                        kind: TokenKind::Delim(Delim::CloseBrace),
+                        ..
+                    }) => {
+                        break;
+                    }
+                    Some(_) => {
+                        return Err(
+                            Diagnostic::error("Unexpected token", self.peek_span()).label(
+                                "I was expecting a comma here",
+                                self.peek_span(),
+                                Level::Error,
+                            ),
+                        );
+                    }
+                    None => break,
+                }
+            }
+        }
+
+        Ok(fields)
+    }
+
+    fn parse_record_field(&mut self) -> Result<DictionaryField<'input>, Diagnostic> {
+        let key = self.parse_expr()?;
+        if self.eat(TokenKind::Colon).is_none() {
+            return Err(
+                Diagnostic::error("Unexpected token", self.peek_span()).label(
+                    "I was expecting a colon here",
+                    self.peek_span(),
+                    Level::Error,
+                ),
+            );
+        }
+
+        let value = self.parse_expr()?;
+        // TODO: expect newline
+        Ok(DictionaryField { key, value })
     }
 
     fn parse_name(&mut self) -> Option<Name<'input>> {
@@ -128,6 +220,17 @@ impl<'input> Parser<'input> {
         {
             self.bump();
             Some(Name { text, span })
+        } else {
+            None
+        }
+    }
+
+    fn eat(&mut self, kind: TokenKind) -> Option<Span> {
+        if let Some(&Token { kind: kind2, span }) = self.peek()
+            && kind == kind2
+        {
+            self.bump();
+            Some(span)
         } else {
             None
         }

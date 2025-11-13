@@ -2,6 +2,7 @@
 pub struct Entry<'input> {
     pub name: &'input str,
     pub request: Option<Request>,
+    pub headers: Option<Expr>,
 }
 
 #[derive(Debug, Clone)]
@@ -24,9 +25,17 @@ pub struct Expr {
 #[derive(Debug, Clone)]
 pub enum ExprKind {
     StringLiteral(String),
+    Dictionary(Vec<DictionaryField>),
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone)]
+pub struct DictionaryField {
+    pub key: Expr,
+    pub value: Expr,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Ty {
     String,
+    Dictionary(Vec<Ty>),
 }

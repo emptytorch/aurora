@@ -46,10 +46,20 @@ impl<'input> Machine<'input> {
         };
 
         let url = self.eval_expr(&request.url)?;
+
         match request.method {
             HttpMethod::Get => {
+                let mut req = self.client.get(url.string());
+                if let Some(expr) = &entry.headers {
+                    let headers = self.eval_headers(expr)?;
+                    for (k, v) in headers {
+                        req = req.header(k, v);
+                    }
+                    println!("{:?}", req);
+                }
+
                 // TODO: error handling
-                let response = self.client.get(url.string()).send().unwrap();
+                let response = req.send().unwrap();
                 // TODO: format
                 println!("{:#?}", response);
             }
@@ -58,9 +68,41 @@ impl<'input> Machine<'input> {
         Ok(())
     }
 
+    // fn map_headers(&self, dictionary: &Value) -> reqwest::header::HeaderMap {
+    //     if let Value::Dictionary(dict) = dictionary {
+    //     } else {
+    //         unreachable!("Body of `[Headers]` should be a dictionary")
+    //     };
+    // }
+    //
+    fn eval_headers(&self, expr: &Expr) -> Result<HashMap<String, String>, Diagnostic> {
+        if let ExprKind::Dictionary(fields) = &expr.kind {
+            fields
+                .iter()
+                .map(|f| {
+                    Ok((
+                        self.eval_expr(&f.key)?.string().to_owned(),
+                        self.eval_expr(&f.value)?.string().to_owned(),
+                    ))
+                })
+                .collect::<Result<HashMap<_, _>, _>>()
+        } else {
+            unreachable!("Body of `[Headers]` should be a dictionary")
+        }
+    }
+
     fn eval_expr(&self, expr: &Expr) -> Result<Value, Diagnostic> {
         match &expr.kind {
             ExprKind::StringLiteral(s) => Ok(Value::String(s.to_owned())),
+            ExprKind::Dictionary(fields) => {
+                let mut map = HashMap::new();
+                for field in fields {
+                    let key = self.eval_expr(&field.key)?.string().to_owned();
+                    let value = self.eval_expr(&field.value)?;
+                    map.insert(key, value);
+                }
+                Ok(Value::Dictionary(map))
+            }
         }
     }
 }

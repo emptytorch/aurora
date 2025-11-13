@@ -41,6 +41,7 @@ fn validate_entry<'input>(
     entry: &ast::Entry<'input>,
 ) -> Result<validated::Entry<'input>, Diagnostic> {
     let mut validated_request = None;
+    let mut validated_headers = None;
     for item in &entry.body {
         match &item.kind {
             ast::EntryItemKind::Request(request) => {
@@ -80,17 +81,72 @@ fn validate_entry<'input>(
                     }
                 }
             }
+            ast::EntryItemKind::Section(name, body) => match name.text {
+                "Headers" => {
+                    let validated_body = validate_expr(body)?;
+                    if let validated::Ty::Dictionary(value_types) = &validated_body.ty {
+                        if !value_types.iter().all(|it| *it == validated::Ty::String) {
+                            return Err(Diagnostic::error("Unexpected types", body.span).label(
+                                "I was expecting all the values to be strings here",
+                                body.span,
+                                Level::Error,
+                            ));
+                        }
+                    } else {
+                        return Err(Diagnostic::error("Unexpected type", body.span).label(
+                            "I was expecting a dictionary here",
+                            body.span,
+                            Level::Error,
+                        ));
+                    };
+
+                    match validated_headers {
+                        Some(_) => {
+                            return Err(Diagnostic::error(
+                                format!(
+                                    "Entry `{}` contains multiple `[Headers]` sections",
+                                    entry.name.text
+                                ),
+                                item.span,
+                            )
+                            .label(
+                                format!(
+                                    "I was expecting to find at most one `[Headers]` section in entry `{}`",
+                                    entry.name.text
+                                ),
+                                item.span,
+                                Level::Error,
+                            ));
+                        }
+                        None => {
+                            validated_headers = Some(validated_body);
+                        }
+                    }
+                }
+                _ => {
+                    return Err(Diagnostic::error(
+                        format!("Unknown section name `{}`", name.text),
+                        name.span,
+                    )
+                    .label(
+                        "I don't know what to do with this section here",
+                        name.span,
+                        Level::Error,
+                    ));
+                }
+            },
         }
     }
 
     Ok(validated::Entry {
         name: entry.name.text,
         request: validated_request,
+        headers: validated_headers,
     })
 }
 
-fn validate_expr(expr: &ast::Expr) -> Result<validated::Expr, Diagnostic> {
-    match expr.kind {
+fn validate_expr<'input>(expr: &ast::Expr<'input>) -> Result<validated::Expr, Diagnostic> {
+    match &expr.kind {
         ast::ExprKind::StringLiteral(s) => {
             let unescaped = unescape_string(s, expr.span)?;
             Ok(validated::Expr {
@@ -98,7 +154,37 @@ fn validate_expr(expr: &ast::Expr) -> Result<validated::Expr, Diagnostic> {
                 ty: validated::Ty::String,
             })
         }
+        ast::ExprKind::Dictionary(fields) => validate_dictionary_fields(fields),
     }
+}
+
+fn validate_dictionary_fields<'input>(
+    fields: &Vec<ast::DictionaryField<'input>>,
+) -> Result<validated::Expr, Diagnostic> {
+    let mut validated_fields = Vec::with_capacity(fields.len());
+
+    for field in fields {
+        let key = validate_expr(&field.key)?;
+        if key.ty != validated::Ty::String {
+            return Err(Diagnostic::error("Mismatched types", field.key.span).label(
+                "I was expecting a string as key here",
+                field.key.span,
+                Level::Error,
+            ));
+        }
+        let value = validate_expr(&field.value)?;
+        validated_fields.push(validated::DictionaryField { key, value });
+    }
+
+    let value_types = validated_fields
+        .iter()
+        .map(|it| it.value.ty.clone())
+        .collect();
+
+    Ok(validated::Expr {
+        kind: validated::ExprKind::Dictionary(validated_fields),
+        ty: validated::Ty::Dictionary(value_types),
+    })
 }
 
 fn unescape_string(raw: &str, span: Span) -> Result<String, Diagnostic> {

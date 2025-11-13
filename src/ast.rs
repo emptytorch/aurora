@@ -26,6 +26,7 @@ pub struct EntryItem<'input> {
 #[derive(Debug, Clone)]
 pub enum EntryItemKind<'input> {
     Request(Request<'input>),
+    Section(Name<'input>, Expr<'input>),
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -54,4 +55,11 @@ pub struct Expr<'input> {
 #[derive(Debug, Clone)]
 pub enum ExprKind<'input> {
     StringLiteral(&'input str),
+    Dictionary(Vec<DictionaryField<'input>>),
+}
+
+#[derive(Debug, Clone)]
+pub struct DictionaryField<'input> {
+    pub key: Expr<'input>,
+    pub value: Expr<'input>,
 }
