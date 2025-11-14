@@ -69,7 +69,7 @@ impl<'input> Machine<'input> {
     fn map_headers(&self, dictionary: &Value) -> reqwest::header::HeaderMap {
         if let Value::Dictionary(dict) = dictionary {
             let mut header_map = reqwest::header::HeaderMap::with_capacity(dict.len());
-            // TDO: error handling
+            // TODO: error handling
             for (k, v) in dict {
                 header_map.insert(
                     reqwest::header::HeaderName::from_str(k).unwrap(),
