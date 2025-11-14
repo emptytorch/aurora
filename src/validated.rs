@@ -15,6 +15,7 @@ pub struct Request {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum HttpMethod {
     Get,
+    Post,
 }
 
 #[derive(Debug, Clone)]

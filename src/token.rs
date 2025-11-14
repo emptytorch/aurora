@@ -19,6 +19,8 @@ pub enum TokenKind<'input> {
 pub enum HttpMethod {
     /// `GET`
     Get,
+    /// `POST`
+    Post,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

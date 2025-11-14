@@ -112,6 +112,7 @@ impl<'input> Lexer<'input> {
         match text {
             "entry" => TokenKind::Keyword(Keyword::Entry),
             "GET" => TokenKind::HttpMethod(HttpMethod::Get),
+            "POST" => TokenKind::HttpMethod(HttpMethod::Post),
             _ => TokenKind::Identifier(text),
         }
     }
@@ -198,10 +199,26 @@ mod test {
     }
 
     #[test]
+    fn lex_identifier_post() {
+        assert_token(
+            "post",
+            Token::new(TokenKind::Identifier("post"), Span::new(0, 4)),
+        );
+    }
+
+    #[test]
     fn lex_http_method_get() {
         assert_token(
             "GET",
             Token::new(TokenKind::HttpMethod(HttpMethod::Get), Span::new(0, 3)),
+        );
+    }
+
+    #[test]
+    fn lex_http_method_post() {
+        assert_token(
+            "POST",
+            Token::new(TokenKind::HttpMethod(HttpMethod::Post), Span::new(0, 4)),
         );
     }
 

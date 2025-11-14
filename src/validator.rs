@@ -76,6 +76,7 @@ fn validate_entry<'input>(
                         validated_request = Some(validated::Request {
                             method: match request.method {
                                 ast::HttpMethod::Get => validated::HttpMethod::Get,
+                                ast::HttpMethod::Post => validated::HttpMethod::Post,
                             },
                             url: validated_url,
                         })
