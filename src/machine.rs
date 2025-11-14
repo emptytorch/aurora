@@ -85,6 +85,7 @@ impl<'input> Machine<'input> {
     fn eval_expr(&self, expr: &Expr) -> Result<Value, Diagnostic> {
         match &expr.kind {
             ExprKind::StringLiteral(s) => Ok(Value::String(s.to_owned())),
+            ExprKind::IntegerLiteral(i) => Ok(Value::Integer(*i)),
             ExprKind::Dictionary(fields) => {
                 let mut map = HashMap::new();
                 for field in fields {

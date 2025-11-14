@@ -3,6 +3,7 @@ use std::collections::HashMap;
 #[derive(Debug, Clone)]
 pub enum Value {
     String(String),
+    Integer(i64),
     Dictionary(HashMap<String, Value>),
 }
 

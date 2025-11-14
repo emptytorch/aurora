@@ -154,6 +154,16 @@ fn validate_expr<'input>(expr: &ast::Expr<'input>) -> Result<validated::Expr, Di
                 ty: validated::Ty::String,
             })
         }
+        ast::ExprKind::IntegerLiteral(s) => {
+            let value = s
+                .parse::<i64>()
+                .map_err(|_| Diagnostic::error("Invalid integer literal", expr.span))?;
+
+            Ok(validated::Expr {
+                kind: validated::ExprKind::IntegerLiteral(value),
+                ty: validated::Ty::Integer,
+            })
+        }
         ast::ExprKind::Dictionary(fields) => validate_dictionary_fields(fields),
     }
 }

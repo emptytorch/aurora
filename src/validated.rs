@@ -25,6 +25,7 @@ pub struct Expr {
 #[derive(Debug, Clone)]
 pub enum ExprKind {
     StringLiteral(String),
+    IntegerLiteral(i64),
     Dictionary(Vec<DictionaryField>),
 }
 
@@ -37,5 +38,6 @@ pub struct DictionaryField {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Ty {
     String,
+    Integer,
     Dictionary(Vec<Ty>),
 }

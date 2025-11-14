@@ -55,6 +55,7 @@ pub struct Expr<'input> {
 #[derive(Debug, Clone)]
 pub enum ExprKind<'input> {
     StringLiteral(&'input str),
+    IntegerLiteral(&'input str),
     Dictionary(Vec<DictionaryField<'input>>),
 }
 
