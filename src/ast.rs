@@ -9,6 +9,7 @@ pub struct Item<'input> {
 #[derive(Debug, Clone)]
 pub enum ItemKind<'input> {
     Entry(Entry<'input>),
+    Const(Name<'input>, Expr<'input>),
 }
 
 #[derive(Debug, Clone)]
@@ -55,6 +56,7 @@ pub struct Expr<'input> {
 
 #[derive(Debug, Clone)]
 pub enum ExprKind<'input> {
+    NameRef(&'input str),
     StringLiteral(&'input str),
     IntegerLiteral(&'input str),
     Dictionary(Vec<DictionaryField<'input>>),

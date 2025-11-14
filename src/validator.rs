@@ -4,18 +4,19 @@ use crate::{
     ast,
     diagnostic::{Diagnostic, Level},
     span::Span,
-    validated::{self, Entry},
+    validated::{self},
 };
 
 pub fn validate<'input>(
     items: Vec<ast::Item<'input>>,
-) -> Result<HashMap<&'input str, Entry<'input>>, Diagnostic> {
+) -> Result<validated::SourceFile<'input>, Diagnostic> {
     let mut entries = HashMap::new();
+    let mut globals = HashMap::new();
     for item in &items {
         match &item.kind {
             ast::ItemKind::Entry(entry) => {
                 let entry_name = entry.name;
-                let validated_entry = validate_entry(entry)?;
+                let validated_entry = validate_entry(entry, &globals)?;
                 match entries.entry(entry_name.text) {
                     hash_map::Entry::Occupied(_) => {
                         return Err(Diagnostic::error(
@@ -31,14 +32,27 @@ pub fn validate<'input>(
                     hash_map::Entry::Vacant(vacant) => _ = vacant.insert(validated_entry),
                 }
             }
+            ast::ItemKind::Const(name, expr) => {
+                let validated_expr = validate_expr(expr, &globals)?;
+                match globals.entry(name.text) {
+                    hash_map::Entry::Occupied(_) => {
+                        return Err(Diagnostic::error(
+                            format!("The variable `{}` is defined multiple times", name.text),
+                            name.span,
+                        ));
+                    }
+                    hash_map::Entry::Vacant(vacant) => _ = vacant.insert(validated_expr),
+                }
+            }
         }
     }
 
-    Ok(entries)
+    Ok(validated::SourceFile { entries, globals })
 }
 
 fn validate_entry<'input>(
     entry: &ast::Entry<'input>,
+    globals: &HashMap<&'input str, validated::Expr>,
 ) -> Result<validated::Entry<'input>, Diagnostic> {
     let mut validated_request = None;
     let mut validated_headers = None;
@@ -46,7 +60,7 @@ fn validate_entry<'input>(
     for item in &entry.body {
         match &item.kind {
             ast::EntryItemKind::Request(request) => {
-                let validated_url = validate_expr(&request.url)?;
+                let validated_url = validate_expr(&request.url, globals)?;
                 if validated_url.ty != validated::Ty::String {
                     return Err(
                         Diagnostic::error("Mismatched types", request.url.span).label(
@@ -85,7 +99,7 @@ fn validate_entry<'input>(
             }
             ast::EntryItemKind::Section(name, body) => match name.text {
                 "Headers" => {
-                    let validated_body = validate_expr(body)?;
+                    let validated_body = validate_expr(body, globals)?;
                     if let validated::Ty::Dictionary(value_types) = &validated_body.ty {
                         if !value_types.iter().all(|it| *it == validated::Ty::String) {
                             return Err(Diagnostic::error("Unexpected types", body.span).label(
@@ -126,7 +140,7 @@ fn validate_entry<'input>(
                     }
                 }
                 "Body" => {
-                    let validated_expr = validate_expr(body)?;
+                    let validated_expr = validate_expr(body, globals)?;
                     if !matches!(validated_expr.ty, validated::Ty::Dictionary(_)) {
                         return Err(Diagnostic::error("Unexpected type", body.span).label(
                             "I was expecting a dictionary here",
@@ -181,7 +195,10 @@ fn validate_entry<'input>(
     })
 }
 
-fn validate_expr<'input>(expr: &ast::Expr<'input>) -> Result<validated::Expr, Diagnostic> {
+fn validate_expr<'input>(
+    expr: &ast::Expr<'input>,
+    globals: &HashMap<&'input str, validated::Expr>,
+) -> Result<validated::Expr, Diagnostic> {
     match &expr.kind {
         ast::ExprKind::StringLiteral(s) => {
             let unescaped = unescape_string(s, expr.span)?;
@@ -200,17 +217,32 @@ fn validate_expr<'input>(expr: &ast::Expr<'input>) -> Result<validated::Expr, Di
                 ty: validated::Ty::Integer,
             })
         }
-        ast::ExprKind::Dictionary(fields) => validate_dictionary_fields(fields),
+        ast::ExprKind::Dictionary(fields) => validate_dictionary_fields(fields, globals),
+        ast::ExprKind::NameRef(name) => {
+            if let Some(expr) = globals.get(name) {
+                Ok(validated::Expr {
+                    kind: validated::ExprKind::NameRef(name.to_string()),
+                    ty: expr.ty.clone(),
+                })
+            } else {
+                Err(Diagnostic::error("Unknown identifier", expr.span).label(
+                    "I don't know what this name is referring to",
+                    expr.span,
+                    Level::Error,
+                ))
+            }
+        }
     }
 }
 
 fn validate_dictionary_fields<'input>(
     fields: &Vec<ast::DictionaryField<'input>>,
+    globals: &HashMap<&'input str, validated::Expr>,
 ) -> Result<validated::Expr, Diagnostic> {
     let mut validated_fields = Vec::with_capacity(fields.len());
 
     for field in fields {
-        let key = validate_expr(&field.key)?;
+        let key = validate_expr(&field.key, globals)?;
         if key.ty != validated::Ty::String {
             return Err(Diagnostic::error("Mismatched types", field.key.span).label(
                 "I was expecting a string as key here",
@@ -218,7 +250,7 @@ fn validate_dictionary_fields<'input>(
                 Level::Error,
             ));
         }
-        let value = validate_expr(&field.value)?;
+        let value = validate_expr(&field.value, globals)?;
         validated_fields.push(validated::DictionaryField { key, value });
     }
 

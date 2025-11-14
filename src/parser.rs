@@ -39,6 +39,10 @@ impl<'input> Parser<'input> {
             return self.parse_entry(span);
         }
 
+        if let Some(span) = self.eat_keyword(Keyword::Const) {
+            return self.parse_const(span);
+        }
+
         Err(Diagnostic::error("Expected item", self.peek_span()).label(
             "I was expecting an item here",
             self.peek_span(),
@@ -67,6 +71,28 @@ impl<'input> Parser<'input> {
                 name,
                 body: entry_items,
             }),
+            span,
+        })
+    }
+
+    fn parse_const(&mut self, const_span: Span) -> Result<Item<'input>, Diagnostic> {
+        let name = self.parse_name().ok_or(
+            Diagnostic::error("Expected identifier", self.peek_span()).label(
+                "I was expecting a variable name here",
+                self.peek_span(),
+                Level::Error,
+            ),
+        )?;
+
+        if self.eat(TokenKind::Eq).is_none() {
+            return Err(Diagnostic::error("Expected `=`", self.peek_span()));
+        }
+
+        let expr = self.parse_expr()?;
+        // TODO: expect newline
+        let span = const_span.to(expr.span);
+        Ok(Item {
+            kind: ItemKind::Const(name, expr),
             span,
         })
     }
@@ -142,6 +168,16 @@ impl<'input> Parser<'input> {
 
     fn opt_parse_expr(&mut self) -> Result<Option<Expr<'input>>, Diagnostic> {
         match self.peek() {
+            Some(&Token {
+                kind: TokenKind::Identifier(s),
+                span,
+            }) => {
+                self.bump();
+                Ok(Some(Expr {
+                    kind: ExprKind::NameRef(s),
+                    span,
+                }))
+            }
             Some(&Token {
                 kind: TokenKind::String(s),
                 span,

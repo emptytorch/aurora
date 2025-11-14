@@ -1,3 +1,10 @@
+use std::collections::HashMap;
+
+pub struct SourceFile<'input> {
+    pub entries: HashMap<&'input str, Entry<'input>>,
+    pub globals: HashMap<&'input str, Expr>,
+}
+
 #[derive(Debug, Clone)]
 pub struct Entry<'input> {
     pub name: &'input str,
@@ -26,6 +33,7 @@ pub struct Expr {
 
 #[derive(Debug, Clone)]
 pub enum ExprKind {
+    NameRef(String),
     StringLiteral(String),
     IntegerLiteral(i64),
     Dictionary(Vec<DictionaryField>),

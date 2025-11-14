@@ -3,33 +3,40 @@ use std::{collections::HashMap, str::FromStr};
 use crate::{
     diagnostic::Diagnostic,
     parser,
-    validated::{Entry, Expr, ExprKind, HttpMethod},
+    validated::{Entry, Expr, ExprKind, HttpMethod, SourceFile},
     validator,
     value::Value,
 };
 
 pub fn execute(input: &str) -> Result<(), Diagnostic> {
     let items = parser::parse(input)?;
-    let entries = validator::validate(items)?;
-    let machine = Machine::new(entries);
+    let file = validator::validate(items)?;
+    let mut machine = Machine::new(file);
     machine.execute()
 }
 
 struct Machine<'input> {
-    entries: HashMap<&'input str, Entry<'input>>,
+    source_file: SourceFile<'input>,
+    names: HashMap<String, Value>,
     client: reqwest::blocking::Client,
 }
 
 impl<'input> Machine<'input> {
-    fn new(entries: HashMap<&'input str, Entry<'input>>) -> Self {
+    fn new(source_file: SourceFile<'input>) -> Self {
         Self {
-            entries,
+            source_file,
+            names: HashMap::new(),
             client: reqwest::blocking::Client::new(),
         }
     }
 
-    fn execute(&self) -> Result<(), Diagnostic> {
-        for entry in self.entries.values() {
+    fn execute(&mut self) -> Result<(), Diagnostic> {
+        for (name, expr) in &self.source_file.globals {
+            let value = self.eval_expr(expr)?;
+            self.names.insert(name.to_string(), value);
+        }
+
+        for entry in self.source_file.entries.values() {
             self.execute_entry(entry)?;
         }
 
@@ -118,6 +125,7 @@ impl<'input> Machine<'input> {
                 }
                 Ok(Value::Dictionary(map))
             }
+            ExprKind::NameRef(name) => Ok(self.names[name].clone()),
         }
     }
 }

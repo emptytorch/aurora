@@ -45,6 +45,7 @@ impl<'input> Lexer<'input> {
             let kind = match first {
                 ':' => TokenKind::Colon,
                 ',' => TokenKind::Comma,
+                '=' => TokenKind::Eq,
                 '{' => TokenKind::Delim(Delim::OpenBrace),
                 '[' => TokenKind::Delim(Delim::OpenBrack),
                 '}' => TokenKind::Delim(Delim::CloseBrace),
@@ -111,6 +112,7 @@ impl<'input> Lexer<'input> {
         let text = &self.input[start..self.pos];
         match text {
             "entry" => TokenKind::Keyword(Keyword::Entry),
+            "const" => TokenKind::Keyword(Keyword::Const),
             "GET" => TokenKind::HttpMethod(HttpMethod::Get),
             "POST" => TokenKind::HttpMethod(HttpMethod::Post),
             _ => TokenKind::Identifier(text),
@@ -231,10 +233,26 @@ mod test {
     }
 
     #[test]
+    fn lex_keyword_const() {
+        assert_token(
+            "const",
+            Token::new(TokenKind::Keyword(Keyword::Const), Span::new(0, 5)),
+        );
+    }
+
+    #[test]
     fn lex_identifier_entry() {
         assert_token(
             "Entry",
             Token::new(TokenKind::Identifier("Entry"), Span::new(0, 5)),
+        );
+    }
+
+    #[test]
+    fn lex_identifier_const() {
+        assert_token(
+            "Const",
+            Token::new(TokenKind::Identifier("Const"), Span::new(0, 5)),
         );
     }
 
@@ -291,6 +309,11 @@ mod test {
     #[test]
     fn lex_comma() {
         assert_token(",", Token::new(TokenKind::Comma, Span::new(0, 1)));
+    }
+
+    #[test]
+    fn lex_eq() {
+        assert_token("=", Token::new(TokenKind::Eq, Span::new(0, 1)));
     }
 
     #[test]

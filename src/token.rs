@@ -11,6 +11,8 @@ pub enum TokenKind<'input> {
     Colon,
     /// `,`
     Comma,
+    /// `=`
+    Eq,
     /// E.g., `{`
     Delim(Delim),
 }
@@ -27,6 +29,8 @@ pub enum HttpMethod {
 pub enum Keyword {
     /// `entry`
     Entry,
+    /// `const`
+    Const,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
