@@ -3,6 +3,7 @@ pub struct Entry<'input> {
     pub name: &'input str,
     pub request: Option<Request>,
     pub headers: Option<Expr>,
+    pub body: Option<Expr>,
 }
 
 #[derive(Debug, Clone)]

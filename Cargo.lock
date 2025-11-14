@@ -75,6 +75,7 @@ dependencies = [
  "annotate-snippets",
  "clap",
  "reqwest",
+ "serde_json",
 ]
 
 [[package]]

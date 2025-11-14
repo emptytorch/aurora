@@ -56,6 +56,11 @@ impl<'input> Machine<'input> {
                     req = req.headers(headers);
                 }
 
+                if let Some(body) = &entry.body {
+                    let value = self.eval_expr(body)?;
+                    req = req.body(value.to_json().to_string());
+                }
+
                 // TODO: error handling
                 let response = req.send().unwrap();
                 // TODO: format

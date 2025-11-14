@@ -42,6 +42,7 @@ fn validate_entry<'input>(
 ) -> Result<validated::Entry<'input>, Diagnostic> {
     let mut validated_request = None;
     let mut validated_headers = None;
+    let mut validated_body = None;
     for item in &entry.body {
         match &item.kind {
             ast::EntryItemKind::Request(request) => {
@@ -123,6 +124,39 @@ fn validate_entry<'input>(
                         }
                     }
                 }
+                "Body" => {
+                    let validated_expr = validate_expr(body)?;
+                    if !matches!(validated_expr.ty, validated::Ty::Dictionary(_)) {
+                        return Err(Diagnostic::error("Unexpected type", body.span).label(
+                            "I was expecting a dictionary here",
+                            body.span,
+                            Level::Error,
+                        ));
+                    }
+
+                    match validated_body {
+                        Some(_) => {
+                            return Err(Diagnostic::error(
+                                format!(
+                                    "Entry `{}` contains multiple `[Body]` sections",
+                                    entry.name.text
+                                ),
+                                item.span,
+                            )
+                            .label(
+                                format!(
+                                    "I was expecting to find at most one `[Body]` section in entry `{}`",
+                                    entry.name.text
+                                ),
+                                item.span,
+                                Level::Error,
+                            ));
+                        }
+                        None => {
+                            validated_body = Some(validated_expr);
+                        }
+                    }
+                }
                 _ => {
                     return Err(Diagnostic::error(
                         format!("Unknown section name `{}`", name.text),
@@ -142,6 +176,7 @@ fn validate_entry<'input>(
         name: entry.name.text,
         request: validated_request,
         headers: validated_headers,
+        body: validated_body,
     })
 }
 
