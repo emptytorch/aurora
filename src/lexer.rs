@@ -54,12 +54,11 @@ impl<'input> Lexer<'input> {
                 _ if first.is_ascii_digit() => self.integer(start),
                 _ if first.is_alphabetic() || first == '_' => self.identifier(start),
                 _ => {
-                    let span = Span::new(start, start);
-                    return Err(Diagnostic::error("Unrecognized character", span).label(
-                        "I don't know what to do with this character",
-                        span,
-                        Level::Error,
-                    ));
+                    return Err(Diagnostic::error(
+                        "Unrecognized character",
+                        Span::new(start, start),
+                    )
+                    .primary_label("I don't know what to do with this character", Level::Error));
                 }
             };
 
@@ -79,13 +78,12 @@ impl<'input> Lexer<'input> {
             }
         }
 
-        let span = Span::new(start, self.pos);
         Err(
-            Diagnostic::error("Unterminated string literal", span).label(
-                "I never found the closing quote for this string",
-                span,
-                Level::Error,
-            ),
+            Diagnostic::error("Unterminated string literal", Span::new(start, self.pos))
+                .primary_label(
+                    "I never found the closing quote for this string",
+                    Level::Error,
+                ),
         )
     }
 

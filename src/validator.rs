@@ -23,9 +23,8 @@ pub fn validate<'input>(
                             format!("The entry `{}` is defined multiple times", entry_name.text),
                             entry_name.span,
                         )
-                        .label(
+                        .primary_label(
                             "I have already seen an entry with this name",
-                            entry_name.span,
                             Level::Error,
                         ));
                     }
@@ -62,13 +61,8 @@ fn validate_entry<'input>(
             ast::EntryItemKind::Request(request) => {
                 let validated_url = validate_expr(&request.url, globals)?;
                 if validated_url.ty != validated::Ty::String {
-                    return Err(
-                        Diagnostic::error("Mismatched types", request.url.span).label(
-                            "I was expecting a string here",
-                            request.url.span,
-                            Level::Error,
-                        ),
-                    );
+                    return Err(Diagnostic::error("Mismatched types", request.url.span)
+                        .primary_label("I was expecting a string here", Level::Error));
                 }
 
                 match validated_request {
@@ -77,12 +71,11 @@ fn validate_entry<'input>(
                             format!("Entry `{}` contains multiple requests", entry.name.text),
                             item.span,
                         )
-                        .label(
+                        .primary_label(
                             format!(
                                 "I was expecting to find one request in entry `{}`",
                                 entry.name.text
                             ),
-                            item.span,
                             Level::Error,
                         ));
                     }
@@ -102,18 +95,15 @@ fn validate_entry<'input>(
                     let validated_body = validate_expr(body, globals)?;
                     if let validated::Ty::Dictionary(value_types) = &validated_body.ty {
                         if !value_types.iter().all(|it| *it == validated::Ty::String) {
-                            return Err(Diagnostic::error("Unexpected types", body.span).label(
-                                "I was expecting all the values to be strings here",
-                                body.span,
-                                Level::Error,
-                            ));
+                            return Err(Diagnostic::error("Unexpected types", body.span)
+                                .primary_label(
+                                    "I was expecting all the values to be strings here",
+                                    Level::Error,
+                                ));
                         }
                     } else {
-                        return Err(Diagnostic::error("Unexpected type", body.span).label(
-                            "I was expecting a dictionary here",
-                            body.span,
-                            Level::Error,
-                        ));
+                        return Err(Diagnostic::error("Unexpected type", body.span)
+                            .primary_label("I was expecting a dictionary here", Level::Error));
                     };
 
                     match validated_headers {
@@ -125,12 +115,11 @@ fn validate_entry<'input>(
                                 ),
                                 item.span,
                             )
-                            .label(
+                            .primary_label(
                                 format!(
                                     "I was expecting to find at most one `[Headers]` section in entry `{}`",
                                     entry.name.text
                                 ),
-                                item.span,
                                 Level::Error,
                             ));
                         }
@@ -142,11 +131,8 @@ fn validate_entry<'input>(
                 "Body" => {
                     let validated_expr = validate_expr(body, globals)?;
                     if !matches!(validated_expr.ty, validated::Ty::Dictionary(_)) {
-                        return Err(Diagnostic::error("Unexpected type", body.span).label(
-                            "I was expecting a dictionary here",
-                            body.span,
-                            Level::Error,
-                        ));
+                        return Err(Diagnostic::error("Unexpected type", body.span)
+                            .primary_label("I was expecting a dictionary here", Level::Error));
                     }
 
                     match validated_body {
@@ -158,12 +144,11 @@ fn validate_entry<'input>(
                                 ),
                                 item.span,
                             )
-                            .label(
+                            .primary_label(
                                 format!(
                                     "I was expecting to find at most one `[Body]` section in entry `{}`",
                                     entry.name.text
                                 ),
-                                item.span,
                                 Level::Error,
                             ));
                         }
@@ -177,9 +162,8 @@ fn validate_entry<'input>(
                         format!("Unknown section name `{}`", name.text),
                         name.span,
                     )
-                    .label(
+                    .primary_label(
                         "I don't know what to do with this section here",
-                        name.span,
                         Level::Error,
                     ));
                 }
@@ -225,11 +209,8 @@ fn validate_expr<'input>(
                     ty: expr.ty.clone(),
                 })
             } else {
-                Err(Diagnostic::error("Unknown identifier", expr.span).label(
-                    "I don't know what this name is referring to",
-                    expr.span,
-                    Level::Error,
-                ))
+                Err(Diagnostic::error("Unknown identifier", expr.span)
+                    .primary_label("I don't know what this name is referring to", Level::Error))
             }
         }
     }
@@ -244,11 +225,8 @@ fn validate_dictionary_fields<'input>(
     for field in fields {
         let key = validate_expr(&field.key, globals)?;
         if key.ty != validated::Ty::String {
-            return Err(Diagnostic::error("Mismatched types", field.key.span).label(
-                "I was expecting a string as key here",
-                field.key.span,
-                Level::Error,
-            ));
+            return Err(Diagnostic::error("Mismatched types", field.key.span)
+                .primary_label("I was expecting a string as key here", Level::Error));
         }
         let value = validate_expr(&field.value, globals)?;
         validated_fields.push(validated::DictionaryField { key, value });
@@ -279,11 +257,11 @@ fn unescape_string(raw: &str, span: Span) -> Result<String, Diagnostic> {
                     let absolute_index = span.start + 1 + i;
                     let span = Span::new(absolute_index, absolute_index + c.len_utf8());
                     return Err(
-                        Diagnostic::error(format!("Unknown character escape `{c}`"), span).label(
-                            "I don't know how to handle this character escape",
-                            span,
-                            Level::Error,
-                        ),
+                        Diagnostic::error(format!("Unknown character escape `{c}`"), span)
+                            .primary_label(
+                                "I don't know how to handle this character escape",
+                                Level::Error,
+                            ),
                     );
                 }
             };

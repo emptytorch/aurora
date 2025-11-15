@@ -43,20 +43,14 @@ impl<'input> Parser<'input> {
             return self.parse_const(span);
         }
 
-        Err(Diagnostic::error("Expected item", self.peek_span()).label(
-            "I was expecting an item here",
-            self.peek_span(),
-            Level::Error,
-        ))
+        Err(Diagnostic::error("Expected item", self.peek_span())
+            .primary_label("I was expecting an item here", Level::Error))
     }
 
     fn parse_entry(&mut self, entry_span: Span) -> Result<Item<'input>, Diagnostic> {
         let name = self.parse_name().ok_or(
-            Diagnostic::error("Expected identifier", self.peek_span()).label(
-                "I was expecting a name here",
-                self.peek_span(),
-                Level::Error,
-            ),
+            Diagnostic::error("Expected identifier", self.peek_span())
+                .primary_label("I was expecting a name here", Level::Error),
         )?;
 
         _ = self.expect_delim(Delim::OpenBrace)?;
@@ -77,11 +71,8 @@ impl<'input> Parser<'input> {
 
     fn parse_const(&mut self, const_span: Span) -> Result<Item<'input>, Diagnostic> {
         let name = self.parse_name().ok_or(
-            Diagnostic::error("Expected identifier", self.peek_span()).label(
-                "I was expecting a variable name here",
-                self.peek_span(),
-                Level::Error,
-            ),
+            Diagnostic::error("Expected identifier", self.peek_span())
+                .primary_label("I was expecting a variable name here", Level::Error),
         )?;
 
         if self.eat(TokenKind::Eq).is_none() {
@@ -135,11 +126,8 @@ impl<'input> Parser<'input> {
             }) => {
                 self.bump();
                 let name = self.parse_name().ok_or(
-                    Diagnostic::error("Expected identifier", self.peek_span()).label(
-                        "I was expecting a section name here",
-                        self.peek_span(),
-                        Level::Error,
-                    ),
+                    Diagnostic::error("Expected identifier", self.peek_span())
+                        .primary_label("I was expecting a section name here", Level::Error),
                 )?;
                 _ = self.expect_delim(Delim::CloseBrack)?;
                 let body = self.parse_expr()?;
@@ -156,13 +144,8 @@ impl<'input> Parser<'input> {
     fn parse_expr(&mut self) -> Result<Expr<'input>, Diagnostic> {
         match self.opt_parse_expr()? {
             Some(expr) => Ok(expr),
-            None => Err(
-                Diagnostic::error("Expected expression", self.peek_span()).label(
-                    "I was expecting an expression here",
-                    self.peek_span(),
-                    Level::Error,
-                ),
-            ),
+            None => Err(Diagnostic::error("Expected expression", self.peek_span())
+                .primary_label("I was expecting an expression here", Level::Error)),
         }
     }
 
@@ -240,13 +223,8 @@ impl<'input> Parser<'input> {
                         break;
                     }
                     Some(_) => {
-                        return Err(
-                            Diagnostic::error("Unexpected token", self.peek_span()).label(
-                                "I was expecting a comma here",
-                                self.peek_span(),
-                                Level::Error,
-                            ),
-                        );
+                        return Err(Diagnostic::error("Unexpected token", self.peek_span())
+                            .primary_label("I was expecting a comma here", Level::Error));
                     }
                     None => break,
                 }
@@ -259,13 +237,8 @@ impl<'input> Parser<'input> {
     fn parse_record_field(&mut self) -> Result<DictionaryField<'input>, Diagnostic> {
         let key = self.parse_expr()?;
         if self.eat(TokenKind::Colon).is_none() {
-            return Err(
-                Diagnostic::error("Unexpected token", self.peek_span()).label(
-                    "I was expecting a colon here",
-                    self.peek_span(),
-                    Level::Error,
-                ),
-            );
+            return Err(Diagnostic::error("Unexpected token", self.peek_span())
+                .primary_label("I was expecting a colon here", Level::Error));
         }
 
         let value = self.parse_expr()?;
@@ -327,13 +300,8 @@ impl<'input> Parser<'input> {
                 format!("I was expecting a closing delimiter `{delim}` here")
             };
 
-            Err(
-                Diagnostic::error("Expected delimiter", self.peek_span()).label(
-                    label_message,
-                    self.peek_span(),
-                    Level::Error,
-                ),
-            )
+            Err(Diagnostic::error("Expected delimiter", self.peek_span())
+                .primary_label(label_message, Level::Error))
         }
     }
 

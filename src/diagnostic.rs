@@ -34,6 +34,11 @@ impl Diagnostic {
         Self::new(message, span, Level::Error)
     }
 
+    pub fn primary_label(self, message: impl Into<String>, level: Level) -> Self {
+        let span = self.span;
+        self.label(message, span, level)
+    }
+
     pub fn label(mut self, message: impl Into<String>, span: Span, level: Level) -> Self {
         let label = Label {
             message: message.into(),
