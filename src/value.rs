@@ -15,6 +15,13 @@ impl Value {
         }
     }
 
+    pub fn dictionary(&self) -> &HashMap<String, Value> {
+        match self {
+            Value::Dictionary(d) => d,
+            _ => panic!("Expected a dictionary"),
+        }
+    }
+
     pub fn to_json(&self) -> serde_json::Value {
         match self {
             Value::String(s) => serde_json::Value::String(s.clone()),

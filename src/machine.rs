@@ -53,63 +53,40 @@ impl<'input> Machine<'input> {
         };
 
         let url = self.eval_expr(&request.url)?;
+        let mut req = match request.method {
+            HttpMethod::Get => self.client.get(url.string()),
+            HttpMethod::Post => self.client.post(url.string()),
+        };
 
-        match request.method {
-            HttpMethod::Get => {
-                let mut req = self.client.get(url.string());
-                if let Some(expr) = &entry.headers {
-                    let dictionary = self.eval_expr(expr)?;
-                    let headers = self.map_headers(&dictionary);
-                    req = req.headers(headers);
-                }
-
-                if let Some(body) = &entry.body {
-                    let value = self.eval_expr(body)?;
-                    req = req.body(value.to_json().to_string());
-                }
-
-                // TODO: error handling
-                let response = req.send().unwrap();
-                // TODO: format
-                println!("{:#?}", response);
-            }
-            HttpMethod::Post => {
-                let mut req = self.client.post(url.string());
-                if let Some(expr) = &entry.headers {
-                    let dictionary = self.eval_expr(expr)?;
-                    let headers = self.map_headers(&dictionary);
-                    req = req.headers(headers);
-                }
-
-                if let Some(body) = &entry.body {
-                    let value = self.eval_expr(body)?;
-                    req = req.body(value.to_json().to_string());
-                }
-
-                // TODO: error handling
-                let response = req.send().unwrap();
-                // TODO: format
-                println!("{:#?}", response);
-            }
+        if let Some(expr) = &entry.headers {
+            let value = self.eval_expr(expr)?;
+            let headers = self.map_headers(value.dictionary());
+            req = req.headers(headers);
         }
+
+        if let Some(body) = &entry.body {
+            let value = self.eval_expr(body)?;
+            req = req.body(value.to_json().to_string());
+        }
+
+        // TODO: error handling
+        let response = req.send().unwrap();
+        // TODO: format
+        println!("{:#?}", response);
 
         Ok(())
     }
 
-    fn map_headers(&self, dictionary: &Value) -> reqwest::header::HeaderMap {
-        if let Value::Dictionary(dict) = dictionary {
-            let mut header_map = reqwest::header::HeaderMap::with_capacity(dict.len());
-            // TODO: error handling
-            for (k, v) in dict {
-                header_map.insert(
-                    reqwest::header::HeaderName::from_str(k).unwrap(),
-                    reqwest::header::HeaderValue::from_str(v.string()).unwrap(),
-                );
-            }
-            header_map
-        } else {
-            unreachable!("Body of `[Headers]` should be a dictionary")
+    fn map_headers(&self, dictionary: &HashMap<String, Value>) -> reqwest::header::HeaderMap {
+        let mut header_map = reqwest::header::HeaderMap::with_capacity(dictionary.len());
+        // TODO: error handling
+        for (k, v) in dictionary {
+            header_map.insert(
+                reqwest::header::HeaderName::from_str(k).unwrap(),
+                reqwest::header::HeaderValue::from_str(v.string()).unwrap(),
+            );
         }
+        header_map
     }
 
     fn eval_expr(&self, expr: &Expr) -> Result<Value, Diagnostic> {
