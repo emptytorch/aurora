@@ -11,32 +11,30 @@ use crate::{
 pub fn execute(input: &str) -> Result<(), Diagnostic> {
     let items = parser::parse(input)?;
     let file = validator::validate(items)?;
-    let mut machine = Machine::new(file);
-    machine.execute()
+    let mut machine = Machine::new();
+    machine.execute(file)
 }
 
-struct Machine<'input> {
-    source_file: SourceFile<'input>,
+struct Machine {
     names: HashMap<String, Value>,
     client: reqwest::blocking::Client,
 }
 
-impl<'input> Machine<'input> {
-    fn new(source_file: SourceFile<'input>) -> Self {
+impl<'input> Machine {
+    fn new() -> Self {
         Self {
-            source_file,
             names: HashMap::new(),
             client: reqwest::blocking::Client::new(),
         }
     }
 
-    fn execute(&mut self) -> Result<(), Diagnostic> {
-        for (name, expr) in &self.source_file.globals {
+    fn execute(&mut self, source_file: SourceFile<'input>) -> Result<(), Diagnostic> {
+        for (name, expr) in &source_file.globals {
             let value = self.eval_expr(expr)?;
             self.names.insert(name.to_string(), value);
         }
 
-        for entry in self.source_file.entries.values() {
+        for entry in source_file.entries.values() {
             self.execute_entry(entry)?;
         }
 
