@@ -68,46 +68,64 @@ impl<'input> Lexer<'input> {
     }
 
     fn string(&mut self, start: usize) -> Result<TokenKind<'input>, Diagnostic> {
-        // "foo{{bar}}baz"
         let mut parts = vec![];
         let mut chunk_start = self.pos;
+
         while let Some(ch) = self.next() {
-            if ch == '"' {
-                if chunk_start < self.pos - 1 {
-                    parts.push(TemplatePart::Literal(
-                        &self.input[chunk_start..self.pos - 1],
-                    ));
-                }
-                return Ok(TokenKind::String(parts));
-            }
-
-            if ch == '{' && self.first() == Some('{') {
-                if chunk_start < self.pos - 1 {
-                    parts.push(TemplatePart::Literal(
-                        &self.input[chunk_start..self.pos - 1],
-                    ));
-                }
-                self.bump();
-
-                let mut tokens = vec![];
-                loop {
-                    if self.first() == Some('}') && self.second() == Some('}') {
-                        self.bump();
-                        self.bump();
-                        break;
-                    }
-                    let Some(token) = self.next_token()? else {
-                        return Err(Diagnostic::error(
-                            "Unterminated template",
-                            Span::new(self.pos, self.pos),
+            match ch {
+                '"' => {
+                    if chunk_start < self.pos - 1 {
+                        parts.push(TemplatePart::Literal(
+                            &self.input[chunk_start..self.pos - 1],
                         ));
-                    };
-                    tokens.push(token);
+                    }
+                    return Ok(TokenKind::String(parts));
                 }
-                parts.push(TemplatePart::Code(tokens));
-                chunk_start = self.pos;
-            } else if ch == '\\' {
-                self.bump();
+
+                '{' if self.first() == Some('{') => {
+                    if chunk_start < self.pos - 1 {
+                        parts.push(TemplatePart::Literal(
+                            &self.input[chunk_start..self.pos - 1],
+                        ));
+                    }
+
+                    self.bump();
+                    let mut tokens = vec![];
+
+                    loop {
+                        match self.first() {
+                            None | Some('"') => {
+                                return Err(Diagnostic::error(
+                                    "Unterminated template",
+                                    Span::new(self.pos, self.pos),
+                                )
+                                .primary_label("I was expecting `}}` here", Level::Error));
+                            }
+                            Some('}') if self.second() == Some('}') => {
+                                self.bump();
+                                self.bump();
+                                break;
+                            }
+                            _ => {
+                                let Some(token) = self.next_token()? else {
+                                    return Err(Diagnostic::error(
+                                        "Unterminated template",
+                                        Span::new(self.pos, self.pos),
+                                    )
+                                    .primary_label("I was expecting `}}` here", Level::Error));
+                                };
+                                tokens.push(token);
+                            }
+                        }
+                    }
+
+                    parts.push(TemplatePart::Code(tokens));
+                    chunk_start = self.pos;
+                }
+                '\\' => {
+                    self.bump();
+                }
+                _ => {}
             }
         }
 

@@ -57,10 +57,16 @@ pub struct Expr<'input> {
 #[derive(Debug, Clone)]
 pub enum ExprKind<'input> {
     NameRef(&'input str),
-    StringLiteral(&'input str),
+    StringLiteral(Vec<TemplatePart<'input>>),
     IntegerLiteral(&'input str),
     FloatLiteral(&'input str),
     Dictionary(Vec<DictionaryField<'input>>),
+}
+
+#[derive(Debug, Clone)]
+pub enum TemplatePart<'input> {
+    Literal(&'input str),
+    Expr(Expr<'input>),
 }
 
 #[derive(Debug, Clone)]

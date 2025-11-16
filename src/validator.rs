@@ -184,10 +184,22 @@ fn validate_expr<'input>(
     globals: &HashMap<&'input str, validated::Expr>,
 ) -> Result<validated::Expr, Diagnostic> {
     match &expr.kind {
-        ast::ExprKind::StringLiteral(s) => {
-            let unescaped = unescape_string(s, expr.span)?;
+        ast::ExprKind::StringLiteral(parts) => {
+            let mut validated_parts = vec![];
+            for part in parts {
+                match part {
+                    ast::TemplatePart::Literal(raw) => {
+                        let unescaped = unescape_string(raw, expr.span)?;
+                        validated_parts.push(validated::TemplatePart::Literal(unescaped));
+                    }
+                    ast::TemplatePart::Expr(expr) => {
+                        let validated_expr = validate_expr(expr, globals)?;
+                        validated_parts.push(validated::TemplatePart::Expr(validated_expr));
+                    }
+                }
+            }
             Ok(validated::Expr {
-                kind: validated::ExprKind::StringLiteral(unescaped),
+                kind: validated::ExprKind::StringLiteral(validated_parts),
                 ty: validated::Ty::String,
             })
         }
@@ -256,8 +268,7 @@ fn validate_dictionary_fields<'input>(
 fn unescape_string(raw: &str, span: Span) -> Result<String, Diagnostic> {
     let mut result = String::new();
     let mut escape = false;
-    // Skip surrounding quotes
-    for (i, c) in raw[1..raw.len() - 1].char_indices() {
+    for (i, c) in raw.char_indices() {
         if escape {
             let unescaped = match c {
                 'n' => '\n',
@@ -297,35 +308,35 @@ mod tests {
 
     #[test]
     fn unescape_string_simple() {
-        assert_eq!(unescape_ok(r#""foo""#), "foo");
+        assert_eq!(unescape_ok("foo"), "foo");
     }
 
     #[test]
     fn unescape_string_with_newline() {
-        assert_eq!(unescape_ok(r#""foo\nbar""#), "foo\nbar");
+        assert_eq!(unescape_ok(r#"foo\nbar"#), "foo\nbar");
     }
 
     #[test]
     fn unescape_string_with_quote() {
-        assert_eq!(unescape_ok(r#""foo\"bar\"""#), "foo\"bar\"");
+        assert_eq!(unescape_ok(r#"foo\"bar\""#), "foo\"bar\"");
     }
 
     #[test]
     fn unescape_string_with_backslash() {
-        assert_eq!(unescape_ok(r#""foo\\bar""#), "foo\\bar");
+        assert_eq!(unescape_ok(r#"foo\\bar"#), "foo\\bar");
     }
 
     #[test]
     fn unescape_string_mixed() {
         assert_eq!(
-            unescape_ok(r#""one\\two\nthree\"end\"""#),
+            unescape_ok(r#"one\\two\nthree\"end\""#),
             "one\\two\nthree\"end\""
         );
     }
 
     #[test]
     fn unescape_string_invalid_escape_points_to_correct_span() {
-        let input = r#""foo\qbar""#;
+        let input = r#"foo\qbar"#;
         let string_span = Span::new(0, 10);
         let diagnostic =
             unescape_string(input, string_span).expect_err("unknown character escape should fail");

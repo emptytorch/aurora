@@ -3,7 +3,7 @@ use std::{collections::HashMap, str::FromStr};
 use crate::{
     diagnostic::Diagnostic,
     parser,
-    validated::{Entry, Expr, ExprKind, HttpMethod, SourceFile},
+    validated::{Entry, Expr, ExprKind, HttpMethod, SourceFile, TemplatePart},
     validator,
     value::Value,
 };
@@ -89,7 +89,23 @@ impl<'input> Machine {
 
     fn eval_expr(&self, expr: &Expr) -> Result<Value, Diagnostic> {
         match &expr.kind {
-            ExprKind::StringLiteral(s) => Ok(Value::String(s.to_owned())),
+            ExprKind::StringLiteral(parts) => {
+                let mut out = String::new();
+                for part in parts {
+                    match part {
+                        TemplatePart::Literal(s) => {
+                            out.push_str(s);
+                        }
+                        TemplatePart::Expr(expr) => {
+                            let value = self.eval_expr(expr)?;
+                            // TODO: stringify
+                            out.push_str(value.string());
+                        }
+                    }
+                }
+
+                Ok(Value::String(out))
+            }
             ExprKind::IntegerLiteral(i) => Ok(Value::Integer(*i)),
             ExprKind::FloatLiteral(f) => Ok(Value::Float(*f)),
             ExprKind::Dictionary(fields) => {

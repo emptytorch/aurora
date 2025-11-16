@@ -34,10 +34,16 @@ pub struct Expr {
 #[derive(Debug, Clone)]
 pub enum ExprKind {
     NameRef(String),
-    StringLiteral(String),
+    StringLiteral(Vec<TemplatePart>),
     IntegerLiteral(i64),
     FloatLiteral(f64),
     Dictionary(Vec<DictionaryField>),
+}
+
+#[derive(Debug, Clone)]
+pub enum TemplatePart {
+    Literal(String),
+    Expr(Expr),
 }
 
 #[derive(Debug, Clone)]
