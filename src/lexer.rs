@@ -1,7 +1,7 @@
 use crate::{
     diagnostic::{Diagnostic, Level},
     span::Span,
-    token::{Delim, HttpMethod, Keyword, Token, TokenKind},
+    token::{Delim, HttpMethod, Keyword, TemplatePart, Token, TokenKind},
 };
 
 pub fn lex<'input>(input: &'input str) -> Result<Vec<Token<'input>>, Diagnostic> {
@@ -68,13 +68,64 @@ impl<'input> Lexer<'input> {
     }
 
     fn string(&mut self, start: usize) -> Result<TokenKind<'input>, Diagnostic> {
-        while let Some(ch) = self.next() {
-            if ch == '"' {
-                return Ok(TokenKind::String(&self.input[start..self.pos]));
-            }
+        let mut parts = vec![];
+        let mut chunk_start = self.pos;
 
-            if ch == '\\' {
-                self.bump();
+        while let Some(ch) = self.next() {
+            match ch {
+                '"' => {
+                    if chunk_start < self.pos - 1 {
+                        parts.push(TemplatePart::Literal(
+                            &self.input[chunk_start..self.pos - 1],
+                        ));
+                    }
+                    return Ok(TokenKind::String(parts));
+                }
+
+                '{' if self.first() == Some('{') => {
+                    if chunk_start < self.pos - 1 {
+                        parts.push(TemplatePart::Literal(
+                            &self.input[chunk_start..self.pos - 1],
+                        ));
+                    }
+
+                    self.bump();
+                    let mut tokens = vec![];
+
+                    loop {
+                        match self.first() {
+                            None | Some('"') => {
+                                return Err(Diagnostic::error(
+                                    "Unterminated template",
+                                    Span::new(self.pos, self.pos),
+                                )
+                                .primary_label("I was expecting `}}` here", Level::Error));
+                            }
+                            Some('}') if self.second() == Some('}') => {
+                                self.bump();
+                                self.bump();
+                                break;
+                            }
+                            _ => {
+                                let Some(token) = self.next_token()? else {
+                                    return Err(Diagnostic::error(
+                                        "Unterminated template",
+                                        Span::new(self.pos, self.pos),
+                                    )
+                                    .primary_label("I was expecting `}}` here", Level::Error));
+                                };
+                                tokens.push(token);
+                            }
+                        }
+                    }
+
+                    parts.push(TemplatePart::Code(tokens));
+                    chunk_start = self.pos;
+                }
+                '\\' => {
+                    self.bump();
+                }
+                _ => {}
             }
         }
 
@@ -152,6 +203,10 @@ impl<'input> Lexer<'input> {
 
     fn first(&mut self) -> Option<char> {
         self.input[self.pos..].chars().next()
+    }
+
+    fn second(&mut self) -> Option<char> {
+        self.input[self.pos..].chars().nth(1)
     }
 
     fn next(&mut self) -> Option<char> {
@@ -308,7 +363,7 @@ mod test {
     fn lex_string_empty() {
         assert_token(
             r#""""#,
-            Token::new(TokenKind::String(r#""""#), Span::new(0, 2)),
+            Token::new(TokenKind::String(vec![]), Span::new(0, 2)),
         );
     }
 
@@ -316,7 +371,10 @@ mod test {
     fn lex_string_simple() {
         assert_token(
             r#""foo""#,
-            Token::new(TokenKind::String(r#""foo""#), Span::new(0, 5)),
+            Token::new(
+                TokenKind::String(vec![TemplatePart::Literal("foo")]),
+                Span::new(0, 5),
+            ),
         );
     }
 
@@ -324,7 +382,10 @@ mod test {
     fn lex_string_escaped_quote() {
         assert_token(
             r#""foo \"bar\"!""#,
-            Token::new(TokenKind::String(r#""foo \"bar\"!""#), Span::new(0, 14)),
+            Token::new(
+                TokenKind::String(vec![TemplatePart::Literal(r#"foo \"bar\"!"#)]),
+                Span::new(0, 14),
+            ),
         );
     }
 
@@ -332,7 +393,96 @@ mod test {
     fn lex_string_escaped_backslash() {
         assert_token(
             r#""foo\\bar""#,
-            Token::new(TokenKind::String(r#""foo\\bar""#), Span::new(0, 10)),
+            Token::new(
+                TokenKind::String(vec![TemplatePart::Literal(r#"foo\\bar"#)]),
+                Span::new(0, 10),
+            ),
+        );
+    }
+
+    #[test]
+    fn lex_string_single_code_template_part() {
+        assert_token(
+            r#""{{foo}}""#,
+            Token::new(
+                TokenKind::String(vec![TemplatePart::Code(vec![Token::new(
+                    TokenKind::Identifier("foo"),
+                    Span::new(3, 6),
+                )])]),
+                Span::new(0, 9),
+            ),
+        );
+    }
+
+    #[test]
+    fn lex_string_single_code_template_part_leading_literal() {
+        assert_token(
+            r#""foo{{bar}}""#,
+            Token::new(
+                TokenKind::String(vec![
+                    TemplatePart::Literal("foo"),
+                    TemplatePart::Code(vec![Token::new(
+                        TokenKind::Identifier("bar"),
+                        Span::new(6, 9),
+                    )]),
+                ]),
+                Span::new(0, 12),
+            ),
+        );
+    }
+
+    #[test]
+    fn lex_string_single_code_template_part_trailing_literal() {
+        assert_token(
+            r#""{{foo}}bar""#,
+            Token::new(
+                TokenKind::String(vec![
+                    TemplatePart::Code(vec![Token::new(
+                        TokenKind::Identifier("foo"),
+                        Span::new(3, 6),
+                    )]),
+                    TemplatePart::Literal("bar"),
+                ]),
+                Span::new(0, 12),
+            ),
+        );
+    }
+
+    #[test]
+    fn lex_string_single_code_template_part_leading_and_trailing_literal() {
+        assert_token(
+            r#""foo{{bar}}baz""#,
+            Token::new(
+                TokenKind::String(vec![
+                    TemplatePart::Literal("foo"),
+                    TemplatePart::Code(vec![Token::new(
+                        TokenKind::Identifier("bar"),
+                        Span::new(6, 9),
+                    )]),
+                    TemplatePart::Literal("baz"),
+                ]),
+                Span::new(0, 15),
+            ),
+        );
+    }
+
+    #[test]
+    fn lex_string_multiple_code_template_part_leading_and_trailing_literal() {
+        assert_token(
+            r#""{{foo}}{{bar}}""#,
+            Token::new(
+                TokenKind::String(vec![
+                    TemplatePart::Code(vec![Token::new(
+                        TokenKind::Identifier("foo"),
+                        Span::new(3, 6),
+                    )]),
+                    TemplatePart::Code(vec![Token::new(
+                        TokenKind::Identifier("bar"),
+                        Span::new(10, 13),
+                    )]),
+                ]),
+                Span::new(0, 16),
+            ),
         );
     }
 
@@ -390,9 +540,15 @@ mod test {
 GET "example.com/""#,
             &[
                 Token::new(TokenKind::HttpMethod(HttpMethod::Get), Span::new(0, 3)),
-                Token::new(TokenKind::String(r#""example.com/""#), Span::new(4, 18)),
+                Token::new(
+                    TokenKind::String(vec![TemplatePart::Literal("example.com/")]),
+                    Span::new(4, 18),
+                ),
                 Token::new(TokenKind::HttpMethod(HttpMethod::Get), Span::new(19, 22)),
-                Token::new(TokenKind::String(r#""example.com/""#), Span::new(23, 37)),
+                Token::new(
+                    TokenKind::String(vec![TemplatePart::Literal("example.com/")]),
+                    Span::new(23, 37),
+                ),
             ],
         );
     }
@@ -405,7 +561,10 @@ GET "example.com/""#,
 GET "example.com/""#,
             &[
                 Token::new(TokenKind::HttpMethod(HttpMethod::Get), Span::new(21, 24)),
-                Token::new(TokenKind::String(r#""example.com/""#), Span::new(25, 39)),
+                Token::new(
+                    TokenKind::String(vec![TemplatePart::Literal("example.com/")]),
+                    Span::new(25, 39),
+                ),
             ],
         );
     }
@@ -422,7 +581,10 @@ GET "example.com/"
 "#,
             &[
                 Token::new(TokenKind::HttpMethod(HttpMethod::Get), Span::new(26, 29)),
-                Token::new(TokenKind::String(r#""example.com/""#), Span::new(30, 44)),
+                Token::new(
+                    TokenKind::String(vec![TemplatePart::Literal("example.com/")]),
+                    Span::new(30, 44),
+                ),
             ],
         );
     }

@@ -1,7 +1,7 @@
 use crate::{
     ast::{
         DictionaryField, Entry, EntryItem, EntryItemKind, Expr, ExprKind, HttpMethod, Item,
-        ItemKind, Name, Request,
+        ItemKind, Name, Request, TemplatePart,
     },
     diagnostic::{Diagnostic, Level},
     lexer,
@@ -162,12 +162,27 @@ impl<'input> Parser<'input> {
                 }))
             }
             Some(&Token {
-                kind: TokenKind::String(s),
+                kind: TokenKind::String(ref parts),
                 span,
             }) => {
+                let parts = parts.clone();
                 self.bump();
+                let mut ast_parts = vec![];
+                for part in parts {
+                    match part {
+                        token::TemplatePart::Literal(s) => {
+                            ast_parts.push(TemplatePart::Literal(s));
+                        }
+                        token::TemplatePart::Code(tokens) => {
+                            let mut parser = Parser::new(tokens);
+                            let expr = parser.parse_expr()?;
+                            ast_parts.push(TemplatePart::Expr(expr));
+                        }
+                    }
+                }
+
                 Ok(Some(Expr {
-                    kind: ExprKind::StringLiteral(s),
+                    kind: ExprKind::StringLiteral(ast_parts),
                     span,
                 }))
             }
@@ -270,9 +285,10 @@ impl<'input> Parser<'input> {
     }
 
     fn eat(&mut self, kind: TokenKind) -> Option<Span> {
-        if let Some(&Token { kind: kind2, span }) = self.peek()
-            && kind == kind2
+        if let Some(token) = self.peek()
+            && token.kind == kind
         {
+            let span = token.span;
             self.bump();
             Some(span)
         } else {

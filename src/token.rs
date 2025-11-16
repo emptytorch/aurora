@@ -1,13 +1,19 @@
 use crate::span::Span;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TokenKind<'input> {
+    /// E.g., `foo"`
     Identifier(&'input str),
+    /// E.g., `GET`
     HttpMethod(HttpMethod),
+    /// E.g.,`entry`
     Keyword(Keyword),
+    /// E.g., `12.3`
     Float(&'input str),
+    /// E.g., `123`
     Integer(&'input str),
-    String(&'input str),
+    /// E.g., `"foo{{bar}}baz"`
+    String(Vec<TemplatePart<'input>>),
     /// `:`
     Colon,
     /// `,`
@@ -46,13 +52,17 @@ pub enum Delim {
     CloseBrack,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum TemplatePart<'input> {
+    Literal(&'input str),
+    Code(Vec<Token<'input>>),
+}
+
 impl Delim {
     pub fn is_open(&self) -> bool {
         match self {
-            Delim::OpenBrace => true,
-            Delim::OpenBrack => true,
-            Delim::CloseBrace => false,
-            Delim::CloseBrack => false,
+            Delim::OpenBrace | Delim::OpenBrack => true,
+            Delim::CloseBrace | Delim::CloseBrack => false,
         }
     }
 }
@@ -68,7 +78,7 @@ impl std::fmt::Display for Delim {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Token<'input> {
     pub kind: TokenKind<'input>,
     pub span: Span,
