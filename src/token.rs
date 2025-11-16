@@ -12,8 +12,8 @@ pub enum TokenKind<'input> {
     Float(&'input str),
     /// E.g., `123`
     Integer(&'input str),
-    /// E.g., `"foo"`
-    String(&'input str),
+    /// E.g., `"foo{{bar}}baz"`
+    String(Vec<TemplatePart<'input>>),
     /// `:`
     Colon,
     /// `,`
@@ -50,6 +50,12 @@ pub enum Delim {
     CloseBrace,
     /// `]`
     CloseBrack,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum TemplatePart<'input> {
+    Literal(&'input str),
+    Code(Vec<Token<'input>>),
 }
 
 impl Delim {

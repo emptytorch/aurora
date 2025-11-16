@@ -161,16 +161,16 @@ impl<'input> Parser<'input> {
                     span,
                 }))
             }
-            Some(&Token {
-                kind: TokenKind::String(s),
-                span,
-            }) => {
-                self.bump();
-                Ok(Some(Expr {
-                    kind: ExprKind::StringLiteral(s),
-                    span,
-                }))
-            }
+            // Some(&Token {
+            //     kind: TokenKind::String(s),
+            //     span,
+            // }) => {
+            //     self.bump();
+            //     Ok(Some(Expr {
+            //         kind: ExprKind::StringLiteral(s),
+            //         span,
+            //     }))
+            // }
             Some(&Token {
                 kind: TokenKind::Integer(s),
                 span,
