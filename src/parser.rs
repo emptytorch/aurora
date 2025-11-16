@@ -182,6 +182,16 @@ impl<'input> Parser<'input> {
                 }))
             }
             Some(&Token {
+                kind: TokenKind::Float(s),
+                span,
+            }) => {
+                self.bump();
+                Ok(Some(Expr {
+                    kind: ExprKind::FloatLiteral(s),
+                    span,
+                }))
+            }
+            Some(&Token {
                 kind: TokenKind::Delim(Delim::OpenBrace),
                 span: open_span,
             }) => {

@@ -91,6 +91,7 @@ impl<'input> Machine {
         match &expr.kind {
             ExprKind::StringLiteral(s) => Ok(Value::String(s.to_owned())),
             ExprKind::IntegerLiteral(i) => Ok(Value::Integer(*i)),
+            ExprKind::FloatLiteral(f) => Ok(Value::Float(*f)),
             ExprKind::Dictionary(fields) => {
                 let mut map = HashMap::new();
                 for field in fields {

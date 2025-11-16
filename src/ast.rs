@@ -59,6 +59,7 @@ pub enum ExprKind<'input> {
     NameRef(&'input str),
     StringLiteral(&'input str),
     IntegerLiteral(&'input str),
+    FloatLiteral(&'input str),
     Dictionary(Vec<DictionaryField<'input>>),
 }
 

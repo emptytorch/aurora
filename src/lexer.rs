@@ -51,7 +51,7 @@ impl<'input> Lexer<'input> {
                 '}' => TokenKind::Delim(Delim::CloseBrace),
                 ']' => TokenKind::Delim(Delim::CloseBrack),
                 '"' => self.string(start)?,
-                _ if first.is_ascii_digit() => self.integer(start),
+                _ if first.is_ascii_digit() => self.number(start),
                 _ if first.is_alphabetic() || first == '_' => self.identifier(start),
                 _ => {
                     return Err(Diagnostic::error(
@@ -87,16 +87,32 @@ impl<'input> Lexer<'input> {
         )
     }
 
-    fn integer(&mut self, start: usize) -> TokenKind<'input> {
-        while let Some(ch) = self.first() {
-            if !ch.is_ascii_digit() {
-                break;
+    fn number(&mut self, start: usize) -> TokenKind<'input> {
+        fn eat_digits<'input>(l: &mut Lexer<'input>) {
+            while let Some(ch) = l.first() {
+                if !ch.is_ascii_digit() {
+                    break;
+                }
+                l.bump();
             }
-            self.bump();
         }
 
+        eat_digits(self);
+
+        let is_float = if matches!(self.first(), Some('.')) {
+            self.bump();
+            eat_digits(self);
+            true
+        } else {
+            false
+        };
+
         let text = &self.input[start..self.pos];
-        TokenKind::Integer(text)
+        if is_float {
+            TokenKind::Float(text)
+        } else {
+            TokenKind::Integer(text)
+        }
     }
 
     fn identifier(&mut self, start: usize) -> TokenKind<'input> {
@@ -264,6 +280,27 @@ mod test {
         assert_token(
             "123",
             Token::new(TokenKind::Integer("123"), Span::new(0, 3)),
+        );
+    }
+
+    #[test]
+    fn lex_float_single_decimal() {
+        assert_token("0.0", Token::new(TokenKind::Float("0.0"), Span::new(0, 3)));
+    }
+
+    #[test]
+    fn lex_float_multiple_decimals() {
+        assert_token(
+            "1.23",
+            Token::new(TokenKind::Float("1.23"), Span::new(0, 4)),
+        );
+    }
+
+    #[test]
+    fn lex_float() {
+        assert_token(
+            "123.456",
+            Token::new(TokenKind::Float("123.456"), Span::new(0, 7)),
         );
     }
 

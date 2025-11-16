@@ -5,6 +5,7 @@ pub enum TokenKind<'input> {
     Identifier(&'input str),
     HttpMethod(HttpMethod),
     Keyword(Keyword),
+    Float(&'input str),
     Integer(&'input str),
     String(&'input str),
     /// `:`

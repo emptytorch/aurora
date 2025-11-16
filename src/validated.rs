@@ -36,6 +36,7 @@ pub enum ExprKind {
     NameRef(String),
     StringLiteral(String),
     IntegerLiteral(i64),
+    FloatLiteral(f64),
     Dictionary(Vec<DictionaryField>),
 }
 
@@ -49,5 +50,6 @@ pub struct DictionaryField {
 pub enum Ty {
     String,
     Integer,
+    Float,
     Dictionary(Vec<Ty>),
 }

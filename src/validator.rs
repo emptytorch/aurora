@@ -201,6 +201,16 @@ fn validate_expr<'input>(
                 ty: validated::Ty::Integer,
             })
         }
+        ast::ExprKind::FloatLiteral(s) => {
+            let value = s
+                .parse::<f64>()
+                .map_err(|_| Diagnostic::error("Invalid float literal", expr.span))?;
+
+            Ok(validated::Expr {
+                kind: validated::ExprKind::FloatLiteral(value),
+                ty: validated::Ty::Float,
+            })
+        }
         ast::ExprKind::Dictionary(fields) => validate_dictionary_fields(fields, globals),
         ast::ExprKind::NameRef(name) => {
             if let Some(expr) = globals.get(name) {

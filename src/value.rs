@@ -4,6 +4,7 @@ use std::collections::HashMap;
 pub enum Value {
     String(String),
     Integer(i64),
+    Float(f64),
     Dictionary(HashMap<String, Value>),
 }
 
@@ -26,6 +27,9 @@ impl Value {
         match self {
             Value::String(s) => serde_json::Value::String(s.clone()),
             Value::Integer(i) => serde_json::Value::Number((*i).into()),
+            Value::Float(f) => serde_json::Value::Number(
+                serde_json::Number::from_f64(*f).expect("Number should be finite"),
+            ),
             Value::Dictionary(d) => {
                 let mut map = serde_json::Map::new();
                 for (k, v) in d {
