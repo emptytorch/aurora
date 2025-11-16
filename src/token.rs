@@ -2,11 +2,17 @@ use crate::span::Span;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TokenKind<'input> {
+    /// E.g., `foo"`
     Identifier(&'input str),
+    /// E.g., `GET`
     HttpMethod(HttpMethod),
+    /// E.g.,`entry`
     Keyword(Keyword),
+    /// E.g., `12.3`
     Float(&'input str),
+    /// E.g., `123`
     Integer(&'input str),
+    /// E.g., `"foo"`
     String(&'input str),
     /// `:`
     Colon,
@@ -49,10 +55,8 @@ pub enum Delim {
 impl Delim {
     pub fn is_open(&self) -> bool {
         match self {
-            Delim::OpenBrace => true,
-            Delim::OpenBrack => true,
-            Delim::CloseBrace => false,
-            Delim::CloseBrack => false,
+            Delim::OpenBrace | Delim::OpenBrack => true,
+            Delim::CloseBrace | Delim::CloseBrack => false,
         }
     }
 }
