@@ -270,9 +270,10 @@ impl<'input> Parser<'input> {
     }
 
     fn eat(&mut self, kind: TokenKind) -> Option<Span> {
-        if let Some(&Token { kind: kind2, span }) = self.peek()
-            && kind == kind2
+        if let Some(token) = self.peek()
+            && token.kind == kind
         {
+            let span = token.span;
             self.bump();
             Some(span)
         } else {
