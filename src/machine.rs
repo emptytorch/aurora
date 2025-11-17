@@ -98,8 +98,7 @@ impl<'input> Machine {
                         }
                         TemplatePart::Expr(expr) => {
                             let value = self.eval_expr(expr)?;
-                            // TODO: stringify
-                            out.push_str(value.string());
+                            out.push_str(&value.to_string());
                         }
                     }
                 }
