@@ -39,4 +39,118 @@ impl Value {
             }
         }
     }
+
+    pub fn stringify(&self) -> String {
+        match self {
+            Value::String(s) => stringify_string(s),
+            Value::Integer(i) => i.to_string(),
+            Value::Float(f) => f.to_string(),
+            Value::Dictionary(d) => {
+                let mut keys: Vec<&String> = d.keys().collect();
+                keys.sort();
+                let inner = keys
+                    .iter()
+                    .map(|it| format!("{}: {}", stringify_string(it), d[*it].stringify()))
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                format!("{{{}}}", inner)
+            }
+        }
+    }
+}
+
+fn stringify_string(s: &str) -> String {
+    let mut out = String::new();
+    out.push('"');
+    for c in s.chars() {
+        match c {
+            '\n' => out.push_str("\\n"),
+            '\\' => out.push_str("\\\\"),
+            '"' => out.push_str("\\\""),
+            _ => out.push(c),
+        }
+    }
+    out.push('"');
+    out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn stringify_string_simple() {
+        let v = Value::String("foo".to_string());
+        assert_eq!(v.stringify(), r#""foo""#);
+    }
+
+    #[test]
+    fn stringify_string_newline() {
+        let v = Value::String("foo\nbar".into());
+        assert_eq!(v.stringify(), r#""foo\nbar""#);
+    }
+
+    #[test]
+    fn stringify_string_quote() {
+        let v = Value::String(r#"foo"bar"#.into());
+        assert_eq!(v.stringify(), r#""foo\"bar""#);
+    }
+
+    #[test]
+    fn stringify_string_backslash() {
+        let v = Value::String(r#"foo\bar"#.into());
+        assert_eq!(v.stringify(), r#""foo\\bar""#);
+    }
+
+    #[test]
+    fn stringify_string_mixed() {
+        let v = Value::String("one\\two\nthree\"end\"".into());
+        assert_eq!(v.stringify(), r#""one\\two\nthree\"end\"""#);
+    }
+
+    #[test]
+    fn stringify_integer() {
+        let v = Value::Integer(42);
+        assert_eq!(v.stringify(), "42");
+    }
+
+    #[test]
+    fn stringify_float() {
+        let v = Value::Float(1.23);
+        assert_eq!(v.stringify(), "1.23");
+    }
+
+    #[test]
+    fn stringify_dict_simple() {
+        let mut map = std::collections::HashMap::new();
+        map.insert("a".to_string(), Value::Integer(1));
+        map.insert("b".to_string(), Value::Integer(2));
+
+        let v = Value::Dictionary(map);
+        assert_eq!(v.stringify(), r#"{"a": 1, "b": 2}"#);
+    }
+
+    #[test]
+    fn stringify_dict_with_escaped_key_and_value() {
+        let mut map = std::collections::HashMap::new();
+        map.insert(
+            r#"ke"y"#.to_string(),
+            Value::String(r#"va"lue"#.to_string()),
+        );
+
+        let v = Value::Dictionary(map);
+        assert_eq!(v.stringify(), r#"{"ke\"y": "va\"lue"}"#);
+    }
+
+    #[test]
+    fn stringify_nested_dict() {
+        let mut inner = std::collections::HashMap::new();
+        inner.insert("x".to_string(), Value::Integer(9));
+
+        let mut outer = std::collections::HashMap::new();
+        outer.insert("inner".to_string(), Value::Dictionary(inner));
+
+        let v = Value::Dictionary(outer);
+        assert_eq!(v.stringify(), r#"{"inner": {"x": 9}}"#);
+    }
 }
