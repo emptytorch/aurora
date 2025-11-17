@@ -8,6 +8,26 @@ pub enum Value {
     Dictionary(HashMap<String, Value>),
 }
 
+impl std::fmt::Display for Value {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Value::String(s) => write!(f, "{s}"),
+            Value::Integer(i) => write!(f, "{i}"),
+            Value::Float(fl) => write!(f, "{fl}"),
+            Value::Dictionary(d) => {
+                let mut keys: Vec<&String> = d.keys().collect();
+                keys.sort();
+                let inner = keys
+                    .iter()
+                    .map(|k| format!("{}: {}", k, d[*k]))
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                write!(f, "{{{}}}", inner)
+            }
+        }
+    }
+}
+
 impl Value {
     pub fn string(&self) -> &str {
         match self {
@@ -152,5 +172,46 @@ mod tests {
 
         let v = Value::Dictionary(outer);
         assert_eq!(v.stringify(), r#"{"inner": {"x": 9}}"#);
+    }
+
+    #[test]
+    fn display_string() {
+        let v = Value::String("hello".to_string());
+        assert_eq!(format!("{}", v), "hello");
+    }
+
+    #[test]
+    fn display_integer() {
+        let v = Value::Integer(42);
+        assert_eq!(format!("{}", v), "42");
+    }
+
+    #[test]
+    fn display_float() {
+        let v = Value::Float(1.23);
+        assert_eq!(format!("{}", v), "1.23");
+    }
+
+    #[test]
+    fn display_dictionary_flat() {
+        let mut d = HashMap::new();
+        d.insert("b".to_string(), Value::Integer(2));
+        d.insert("a".to_string(), Value::Integer(1));
+
+        let v = Value::Dictionary(d);
+        assert_eq!(format!("{}", v), "{a: 1, b: 2}");
+    }
+
+    #[test]
+    fn display_dictionary_nested() {
+        let mut inner = HashMap::new();
+        inner.insert("x".to_string(), Value::Integer(5));
+        let inner_dict = Value::Dictionary(inner);
+
+        let mut outer = HashMap::new();
+        outer.insert("inner".to_string(), inner_dict);
+
+        let v = Value::Dictionary(outer);
+        assert_eq!(format!("{}", v), "{inner: {x: 5}}");
     }
 }
