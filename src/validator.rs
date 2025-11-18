@@ -3,13 +3,13 @@ use std::collections::{HashMap, hash_map};
 use crate::{
     ast,
     diagnostic::{Diagnostic, Level},
+    parser,
     span::Span,
     validated::{self},
 };
 
-pub fn validate<'input>(
-    items: Vec<ast::Item<'input>>,
-) -> Result<validated::SourceFile<'input>, Diagnostic> {
+pub fn validate<'input>(input: &'input str) -> Result<validated::SourceFile<'input>, Diagnostic> {
+    let items = parser::parse(input)?;
     let mut entries = HashMap::new();
     let mut globals = HashMap::new();
     for item in &items {

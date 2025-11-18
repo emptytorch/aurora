@@ -2,15 +2,13 @@ use std::{collections::HashMap, str::FromStr};
 
 use crate::{
     diagnostic::Diagnostic,
-    parser,
     validated::{Entry, Expr, ExprKind, HttpMethod, SourceFile, TemplatePart},
     validator,
     value::Value,
 };
 
 pub fn execute(input: &str) -> Result<(), Diagnostic> {
-    let items = parser::parse(input)?;
-    let file = validator::validate(items)?;
+    let file = validator::validate(input)?;
     let mut machine = Machine::new();
     machine.execute(file)
 }
