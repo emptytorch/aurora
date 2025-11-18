@@ -10,259 +10,293 @@ use crate::{
 
 pub fn validate<'input>(input: &'input str) -> Result<validated::SourceFile<'input>, Diagnostic> {
     let items = parser::parse(input)?;
-    let mut entries = HashMap::new();
-    let mut globals = HashMap::new();
-    for item in &items {
-        match &item.kind {
-            ast::ItemKind::Entry(entry) => {
-                let entry_name = entry.name;
-                let validated_entry = validate_entry(entry, &globals)?;
-                match entries.entry(entry_name.text) {
-                    hash_map::Entry::Occupied(_) => {
-                        return Err(Diagnostic::error(
-                            format!("The entry `{}` is defined multiple times", entry_name.text),
-                            entry_name.span,
-                        )
-                        .primary_label(
-                            "I have already seen an entry with this name",
-                            Level::Error,
-                        ));
-                    }
-                    hash_map::Entry::Vacant(vacant) => _ = vacant.insert(validated_entry),
-                }
-            }
-            ast::ItemKind::Const(name, expr) => {
-                let validated_expr = validate_expr(expr, &globals)?;
-                match globals.entry(name.text) {
-                    hash_map::Entry::Occupied(_) => {
-                        return Err(Diagnostic::error(
-                            format!("The variable `{}` is defined multiple times", name.text),
-                            name.span,
-                        ));
-                    }
-                    hash_map::Entry::Vacant(vacant) => _ = vacant.insert(validated_expr),
-                }
-            }
+    let validator = Validator::new();
+    validator.validate(items)
+}
+
+struct Validator<'input> {
+    globals: HashMap<&'input str, validated::Expr>,
+    entries: HashMap<&'input str, validated::Entry<'input>>,
+}
+
+impl<'input> Validator<'input> {
+    fn new() -> Self {
+        Self {
+            globals: HashMap::new(),
+            entries: HashMap::new(),
         }
     }
 
-    Ok(validated::SourceFile { entries, globals })
-}
-
-fn validate_entry<'input>(
-    entry: &ast::Entry<'input>,
-    globals: &HashMap<&'input str, validated::Expr>,
-) -> Result<validated::Entry<'input>, Diagnostic> {
-    let mut validated_request = None;
-    let mut validated_headers = None;
-    let mut validated_body = None;
-    for item in &entry.body {
-        match &item.kind {
-            ast::EntryItemKind::Request(request) => {
-                let validated_url = validate_expr(&request.url, globals)?;
-                if validated_url.ty != validated::Ty::String {
-                    return Err(Diagnostic::error("Mismatched types", request.url.span)
-                        .primary_label("I was expecting a string here", Level::Error));
-                }
-
-                match validated_request {
-                    Some(_) => {
-                        return Err(Diagnostic::error(
-                            format!("Entry `{}` contains multiple requests", entry.name.text),
-                            item.span,
-                        )
-                        .primary_label(
-                            format!(
-                                "I was expecting to find one request in entry `{}`",
-                                entry.name.text
-                            ),
-                            Level::Error,
-                        ));
+    fn validate(
+        mut self,
+        items: Vec<ast::Item<'input>>,
+    ) -> Result<validated::SourceFile<'input>, Diagnostic> {
+        for item in items {
+            match item.kind {
+                ast::ItemKind::Entry(entry) => {
+                    let entry_name = entry.name;
+                    let validated_entry = self.validate_entry(entry)?;
+                    match self.entries.entry(entry_name.text) {
+                        hash_map::Entry::Occupied(_) => {
+                            return Err(Diagnostic::error(
+                                format!(
+                                    "The entry `{}` is defined multiple times",
+                                    entry_name.text
+                                ),
+                                entry_name.span,
+                            )
+                            .primary_label(
+                                "I have already seen an entry with this name",
+                                Level::Error,
+                            ));
+                        }
+                        hash_map::Entry::Vacant(vacant) => _ = vacant.insert(validated_entry),
                     }
-                    None => {
-                        validated_request = Some(validated::Request {
-                            method: match request.method {
-                                ast::HttpMethod::Get => validated::HttpMethod::Get,
-                                ast::HttpMethod::Post => validated::HttpMethod::Post,
-                            },
-                            url: validated_url,
-                        })
+                }
+                ast::ItemKind::Const(name, expr) => {
+                    let validated_expr = self.validate_expr(expr)?;
+                    match self.globals.entry(name.text) {
+                        hash_map::Entry::Occupied(_) => {
+                            return Err(Diagnostic::error(
+                                format!("The variable `{}` is defined multiple times", name.text),
+                                name.span,
+                            ));
+                        }
+                        hash_map::Entry::Vacant(vacant) => _ = vacant.insert(validated_expr),
                     }
                 }
             }
-            ast::EntryItemKind::Section(name, body) => match name.text {
-                "Headers" => {
-                    let validated_body = validate_expr(body, globals)?;
-                    if let validated::Ty::Dictionary(value_types) = &validated_body.ty {
-                        if !value_types.iter().all(|it| *it == validated::Ty::String) {
-                            return Err(Diagnostic::error("Unexpected types", body.span)
-                                .primary_label(
-                                    "I was expecting all the values to be strings here",
-                                    Level::Error,
-                                ));
-                        }
-                    } else {
-                        return Err(Diagnostic::error("Unexpected type", body.span)
-                            .primary_label("I was expecting a dictionary here", Level::Error));
-                    };
+        }
 
-                    match validated_headers {
+        Ok(validated::SourceFile {
+            entries: self.entries,
+            globals: self.globals,
+        })
+    }
+
+    fn validate_entry(
+        &self,
+        entry: ast::Entry<'input>,
+    ) -> Result<validated::Entry<'input>, Diagnostic> {
+        let mut validated_request = None;
+        let mut validated_headers = None;
+        let mut validated_body = None;
+        for item in entry.body {
+            match item.kind {
+                ast::EntryItemKind::Request(request) => {
+                    let url_span = request.url.span;
+                    let validated_url = self.validate_expr(request.url)?;
+                    if validated_url.ty != validated::Ty::String {
+                        return Err(Diagnostic::error("Mismatched types", url_span)
+                            .primary_label("I was expecting a string here", Level::Error));
+                    }
+
+                    match validated_request {
                         Some(_) => {
                             return Err(Diagnostic::error(
-                                format!(
-                                    "Entry `{}` contains multiple `[Headers]` sections",
-                                    entry.name.text
-                                ),
+                                format!("Entry `{}` contains multiple requests", entry.name.text),
                                 item.span,
                             )
                             .primary_label(
                                 format!(
-                                    "I was expecting to find at most one `[Headers]` section in entry `{}`",
+                                    "I was expecting to find one request in entry `{}`",
                                     entry.name.text
                                 ),
                                 Level::Error,
                             ));
                         }
                         None => {
-                            validated_headers = Some(validated_body);
+                            validated_request = Some(validated::Request {
+                                method: match request.method {
+                                    ast::HttpMethod::Get => validated::HttpMethod::Get,
+                                    ast::HttpMethod::Post => validated::HttpMethod::Post,
+                                },
+                                url: validated_url,
+                            })
                         }
                     }
                 }
-                "Body" => {
-                    let validated_expr = validate_expr(body, globals)?;
-                    if !matches!(validated_expr.ty, validated::Ty::Dictionary(_)) {
-                        return Err(Diagnostic::error("Unexpected type", body.span)
-                            .primary_label("I was expecting a dictionary here", Level::Error));
-                    }
+                ast::EntryItemKind::Section(name, body) => {
+                    let body_span = body.span;
+                    match name.text {
+                        "Headers" => {
+                            let validated_body = self.validate_expr(body)?;
+                            if let validated::Ty::Dictionary(value_types) = &validated_body.ty {
+                                if !value_types.iter().all(|it| *it == validated::Ty::String) {
+                                    return Err(Diagnostic::error("Unexpected types", body_span)
+                                        .primary_label(
+                                            "I was expecting all the values to be strings here",
+                                            Level::Error,
+                                        ));
+                                }
+                            } else {
+                                return Err(Diagnostic::error("Unexpected type", body_span)
+                                    .primary_label(
+                                        "I was expecting a dictionary here",
+                                        Level::Error,
+                                    ));
+                            };
 
-                    match validated_body {
-                        Some(_) => {
+                            match validated_headers {
+                                Some(_) => {
+                                    return Err(Diagnostic::error(
+                                                format!(
+                                                    "Entry `{}` contains multiple `[Headers]` sections",
+                                                    entry.name.text
+                                                ),
+                                                item.span,
+                                            )
+                                            .primary_label(
+                                                format!(
+                                                    "I was expecting to find at most one `[Headers]` section in entry `{}`",
+                                                    entry.name.text
+                                                ),
+                                                Level::Error,
+                                            ));
+                                }
+                                None => {
+                                    validated_headers = Some(validated_body);
+                                }
+                            }
+                        }
+                        "Body" => {
+                            let validated_expr = self.validate_expr(body)?;
+                            if !matches!(validated_expr.ty, validated::Ty::Dictionary(_)) {
+                                return Err(Diagnostic::error("Unexpected type", body_span)
+                                    .primary_label(
+                                        "I was expecting a dictionary here",
+                                        Level::Error,
+                                    ));
+                            }
+
+                            match validated_body {
+                                Some(_) => {
+                                    return Err(Diagnostic::error(
+                                                format!(
+                                                    "Entry `{}` contains multiple `[Body]` sections",
+                                                    entry.name.text
+                                                ),
+                                                item.span,
+                                            )
+                                            .primary_label(
+                                                format!(
+                                                    "I was expecting to find at most one `[Body]` section in entry `{}`",
+                                                    entry.name.text
+                                                ),
+                                                Level::Error,
+                                            ));
+                                }
+                                None => {
+                                    validated_body = Some(validated_expr);
+                                }
+                            }
+                        }
+                        _ => {
                             return Err(Diagnostic::error(
-                                format!(
-                                    "Entry `{}` contains multiple `[Body]` sections",
-                                    entry.name.text
-                                ),
-                                item.span,
+                                format!("Unknown section name `{}`", name.text),
+                                name.span,
                             )
                             .primary_label(
-                                format!(
-                                    "I was expecting to find at most one `[Body]` section in entry `{}`",
-                                    entry.name.text
-                                ),
+                                "I don't know what to do with this section here",
                                 Level::Error,
                             ));
                         }
-                        None => {
-                            validated_body = Some(validated_expr);
-                        }
-                    }
-                }
-                _ => {
-                    return Err(Diagnostic::error(
-                        format!("Unknown section name `{}`", name.text),
-                        name.span,
-                    )
-                    .primary_label(
-                        "I don't know what to do with this section here",
-                        Level::Error,
-                    ));
-                }
-            },
-        }
-    }
-
-    Ok(validated::Entry {
-        name: entry.name.text,
-        request: validated_request,
-        headers: validated_headers,
-        body: validated_body,
-    })
-}
-
-fn validate_expr<'input>(
-    expr: &ast::Expr<'input>,
-    globals: &HashMap<&'input str, validated::Expr>,
-) -> Result<validated::Expr, Diagnostic> {
-    match &expr.kind {
-        ast::ExprKind::StringLiteral(parts) => {
-            let mut validated_parts = vec![];
-            for part in parts {
-                match part {
-                    ast::TemplatePart::Literal(raw) => {
-                        let unescaped = unescape_string(raw, expr.span)?;
-                        validated_parts.push(validated::TemplatePart::Literal(unescaped));
-                    }
-                    ast::TemplatePart::Expr(expr) => {
-                        let validated_expr = validate_expr(expr, globals)?;
-                        validated_parts.push(validated::TemplatePart::Expr(validated_expr));
                     }
                 }
             }
-            Ok(validated::Expr {
-                kind: validated::ExprKind::StringLiteral(validated_parts),
-                ty: validated::Ty::String,
-            })
         }
-        ast::ExprKind::IntegerLiteral(s) => {
-            let value = s
-                .parse::<i64>()
-                .map_err(|_| Diagnostic::error("Invalid integer literal", expr.span))?;
 
-            Ok(validated::Expr {
-                kind: validated::ExprKind::IntegerLiteral(value),
-                ty: validated::Ty::Integer,
-            })
-        }
-        ast::ExprKind::FloatLiteral(s) => {
-            let value = s
-                .parse::<f64>()
-                .map_err(|_| Diagnostic::error("Invalid float literal", expr.span))?;
+        Ok(validated::Entry {
+            name: entry.name.text,
+            request: validated_request,
+            headers: validated_headers,
+            body: validated_body,
+        })
+    }
 
-            Ok(validated::Expr {
-                kind: validated::ExprKind::FloatLiteral(value),
-                ty: validated::Ty::Float,
-            })
-        }
-        ast::ExprKind::Dictionary(fields) => validate_dictionary_fields(fields, globals),
-        ast::ExprKind::NameRef(name) => {
-            if let Some(expr) = globals.get(name) {
+    fn validate_expr(&self, expr: ast::Expr<'input>) -> Result<validated::Expr, Diagnostic> {
+        match expr.kind {
+            ast::ExprKind::StringLiteral(parts) => {
+                let mut validated_parts = vec![];
+                for part in parts {
+                    match part {
+                        ast::TemplatePart::Literal(raw) => {
+                            let unescaped = unescape_string(raw, expr.span)?;
+                            validated_parts.push(validated::TemplatePart::Literal(unescaped));
+                        }
+                        ast::TemplatePart::Expr(expr) => {
+                            let validated_expr = self.validate_expr(expr)?;
+                            validated_parts.push(validated::TemplatePart::Expr(validated_expr));
+                        }
+                    }
+                }
                 Ok(validated::Expr {
-                    kind: validated::ExprKind::NameRef(name.to_string()),
-                    ty: expr.ty.clone(),
+                    kind: validated::ExprKind::StringLiteral(validated_parts),
+                    ty: validated::Ty::String,
                 })
-            } else {
-                Err(Diagnostic::error("Unknown identifier", expr.span)
-                    .primary_label("I don't know what this name is referring to", Level::Error))
+            }
+            ast::ExprKind::IntegerLiteral(s) => {
+                let value = s
+                    .parse::<i64>()
+                    .map_err(|_| Diagnostic::error("Invalid integer literal", expr.span))?;
+
+                Ok(validated::Expr {
+                    kind: validated::ExprKind::IntegerLiteral(value),
+                    ty: validated::Ty::Integer,
+                })
+            }
+            ast::ExprKind::FloatLiteral(s) => {
+                let value = s
+                    .parse::<f64>()
+                    .map_err(|_| Diagnostic::error("Invalid float literal", expr.span))?;
+
+                Ok(validated::Expr {
+                    kind: validated::ExprKind::FloatLiteral(value),
+                    ty: validated::Ty::Float,
+                })
+            }
+            ast::ExprKind::Dictionary(fields) => self.validate_dictionary_fields(fields),
+            ast::ExprKind::NameRef(name) => {
+                if let Some(expr) = self.globals.get(name) {
+                    Ok(validated::Expr {
+                        kind: validated::ExprKind::NameRef(name.to_string()),
+                        ty: expr.ty.clone(),
+                    })
+                } else {
+                    Err(Diagnostic::error("Unknown identifier", expr.span)
+                        .primary_label("I don't know what this name is referring to", Level::Error))
+                }
             }
         }
     }
-}
 
-fn validate_dictionary_fields<'input>(
-    fields: &Vec<ast::DictionaryField<'input>>,
-    globals: &HashMap<&'input str, validated::Expr>,
-) -> Result<validated::Expr, Diagnostic> {
-    let mut validated_fields = Vec::with_capacity(fields.len());
+    fn validate_dictionary_fields(
+        &self,
+        fields: Vec<ast::DictionaryField<'input>>,
+    ) -> Result<validated::Expr, Diagnostic> {
+        let mut validated_fields = Vec::with_capacity(fields.len());
 
-    for field in fields {
-        let key = validate_expr(&field.key, globals)?;
-        if key.ty != validated::Ty::String {
-            return Err(Diagnostic::error("Mismatched types", field.key.span)
-                .primary_label("I was expecting a string as key here", Level::Error));
+        for field in fields {
+            let key_span = field.key.span;
+            let key = self.validate_expr(field.key)?;
+            if key.ty != validated::Ty::String {
+                return Err(Diagnostic::error("Mismatched types", key_span)
+                    .primary_label("I was expecting a string as key here", Level::Error));
+            }
+            let value = self.validate_expr(field.value)?;
+            validated_fields.push(validated::DictionaryField { key, value });
         }
-        let value = validate_expr(&field.value, globals)?;
-        validated_fields.push(validated::DictionaryField { key, value });
+
+        let value_types = validated_fields
+            .iter()
+            .map(|it| it.value.ty.clone())
+            .collect();
+
+        Ok(validated::Expr {
+            kind: validated::ExprKind::Dictionary(validated_fields),
+            ty: validated::Ty::Dictionary(value_types),
+        })
     }
-
-    let value_types = validated_fields
-        .iter()
-        .map(|it| it.value.ty.clone())
-        .collect();
-
-    Ok(validated::Expr {
-        kind: validated::ExprKind::Dictionary(validated_fields),
-        ty: validated::Ty::Dictionary(value_types),
-    })
 }
 
 fn unescape_string(raw: &str, span: Span) -> Result<String, Diagnostic> {
