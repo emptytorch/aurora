@@ -118,10 +118,10 @@ impl<'input> Validator<'input> {
                 }
                 ast::EntryItemKind::Section(name, body) => {
                     let body_span = body.span;
+                    let validated_expr = self.validate_expr(body)?;
                     match name.text {
                         "Headers" => {
-                            let validated_body = self.validate_expr(body)?;
-                            if let validated::Ty::Dictionary(value_types) = &validated_body.ty {
+                            if let validated::Ty::Dictionary(value_types) = &validated_expr.ty {
                                 if !value_types.iter().all(|it| *it == validated::Ty::String) {
                                     return Err(Diagnostic::error("Unexpected types", body_span)
                                         .primary_label(
@@ -155,12 +155,11 @@ impl<'input> Validator<'input> {
                                             ));
                                 }
                                 None => {
-                                    validated_headers = Some(validated_body);
+                                    validated_headers = Some(validated_expr);
                                 }
                             }
                         }
                         "Body" => {
-                            let validated_expr = self.validate_expr(body)?;
                             if !matches!(validated_expr.ty, validated::Ty::Dictionary(_)) {
                                 return Err(Diagnostic::error("Unexpected type", body_span)
                                     .primary_label(
