@@ -86,13 +86,3 @@ pub struct Token<'input> {
     pub span: Span,
     pub skipped_newline: bool,
 }
-
-impl<'input> Token<'input> {
-    pub fn new(kind: TokenKind<'input>, span: Span, skipped_newline: bool) -> Self {
-        Self {
-            kind,
-            span,
-            skipped_newline,
-        }
-    }
-}
