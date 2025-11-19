@@ -203,10 +203,11 @@ impl<'input> Lexer<'input> {
     }
 
     fn skip_comment(&mut self) {
-        while let Some(ch) = self.next() {
+        while let Some(ch) = self.first() {
             if ch == '\n' {
                 break;
             }
+            self.bump();
         }
     }
 
