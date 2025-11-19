@@ -178,6 +178,7 @@ impl<'input> Lexer<'input> {
         match text {
             "entry" => TokenKind::Keyword(Keyword::Entry),
             "const" => TokenKind::Keyword(Keyword::Const),
+            "null" => TokenKind::Keyword(Keyword::Null),
             "GET" => TokenKind::HttpMethod(HttpMethod::Get),
             "POST" => TokenKind::HttpMethod(HttpMethod::Post),
             _ => TokenKind::Identifier(text),
@@ -310,6 +311,14 @@ mod test {
     }
 
     #[test]
+    fn lex_keyword_null() {
+        assert_token(
+            "null",
+            Token::new(TokenKind::Keyword(Keyword::Null), Span::new(0, 4)),
+        );
+    }
+
+    #[test]
     fn lex_identifier_entry() {
         assert_token(
             "Entry",
@@ -322,6 +331,14 @@ mod test {
         assert_token(
             "Const",
             Token::new(TokenKind::Identifier("Const"), Span::new(0, 5)),
+        );
+    }
+
+    #[test]
+    fn lex_identifier_null() {
+        assert_token(
+            "NULL",
+            Token::new(TokenKind::Identifier("NULL"), Span::new(0, 4)),
         );
     }
 

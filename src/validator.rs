@@ -254,6 +254,10 @@ impl<'input> Validator<'input> {
                     ty: validated::Ty::Float,
                 })
             }
+            ast::ExprKind::NullLiteral => Ok(validated::Expr {
+                kind: validated::ExprKind::NullLiteral,
+                ty: validated::Ty::Null,
+            }),
             ast::ExprKind::Dictionary(fields) => self.validate_dictionary_fields(fields),
             ast::ExprKind::NameRef(name) => {
                 if let Some(expr) = self.globals.get(name) {

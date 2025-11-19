@@ -60,6 +60,7 @@ pub enum ExprKind<'input> {
     StringLiteral(Vec<TemplatePart<'input>>),
     IntegerLiteral(&'input str),
     FloatLiteral(&'input str),
+    NullLiteral,
     Dictionary(Vec<DictionaryField<'input>>),
 }
 

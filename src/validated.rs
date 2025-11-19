@@ -37,6 +37,7 @@ pub enum ExprKind {
     StringLiteral(Vec<TemplatePart>),
     IntegerLiteral(i64),
     FloatLiteral(f64),
+    NullLiteral,
     Dictionary(Vec<DictionaryField>),
 }
 
@@ -57,5 +58,6 @@ pub enum Ty {
     String,
     Integer,
     Float,
+    Null,
     Dictionary(Vec<Ty>),
 }

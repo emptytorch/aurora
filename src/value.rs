@@ -5,6 +5,7 @@ pub enum Value {
     String(String),
     Integer(i64),
     Float(f64),
+    Null,
     Dictionary(HashMap<String, Value>),
 }
 
@@ -14,6 +15,7 @@ impl std::fmt::Display for Value {
             Value::String(s) => write!(f, "{s}"),
             Value::Integer(i) => write!(f, "{i}"),
             Value::Float(fl) => write!(f, "{fl}"),
+            Value::Null => write!(f, "null"),
             Value::Dictionary(d) => {
                 let mut keys: Vec<&String> = d.keys().collect();
                 keys.sort();
@@ -50,6 +52,7 @@ impl Value {
             Value::Float(f) => serde_json::Value::Number(
                 serde_json::Number::from_f64(*f).expect("Number should be finite"),
             ),
+            Value::Null => serde_json::Value::Null,
             Value::Dictionary(d) => {
                 let mut map = serde_json::Map::new();
                 for (k, v) in d {
@@ -65,6 +68,7 @@ impl Value {
             Value::String(s) => stringify_string(s),
             Value::Integer(i) => i.to_string(),
             Value::Float(f) => f.to_string(),
+            Value::Null => "null".to_string(),
             Value::Dictionary(d) => {
                 let mut keys: Vec<&String> = d.keys().collect();
                 keys.sort();

@@ -147,6 +147,7 @@ impl<'input> Machine {
             }
             ExprKind::IntegerLiteral(i) => Ok(Value::Integer(*i)),
             ExprKind::FloatLiteral(f) => Ok(Value::Float(*f)),
+            ExprKind::NullLiteral => Ok(Value::Null),
             ExprKind::Dictionary(fields) => {
                 let mut map = HashMap::new();
                 for field in fields {

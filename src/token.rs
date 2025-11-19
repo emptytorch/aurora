@@ -38,6 +38,8 @@ pub enum Keyword {
     Entry,
     /// `const`
     Const,
+    /// `null`
+    Null,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

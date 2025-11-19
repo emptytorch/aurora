@@ -207,6 +207,16 @@ impl<'input> Parser<'input> {
                 }))
             }
             Some(&Token {
+                kind: TokenKind::Keyword(Keyword::Null),
+                span,
+            }) => {
+                self.bump();
+                Ok(Some(Expr {
+                    kind: ExprKind::NullLiteral,
+                    span,
+                }))
+            }
+            Some(&Token {
                 kind: TokenKind::Delim(Delim::OpenBrace),
                 span: open_span,
             }) => {
