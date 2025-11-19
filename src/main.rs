@@ -24,15 +24,20 @@ enum Command {
     Run {
         /// Path to the `.au` file to execute.
         path: PathBuf,
+        /// Name of an entry to execute
+        entry: Option<String>,
     },
 }
 
 fn main() {
     match Args::parse().cmd {
-        Command::Run { path } => {
+        Command::Run { path, entry } => {
             let input = std::fs::read_to_string(&path).expect("could not read .au file");
-            if let Err(diagnostic) = machine::execute(&input) {
-                diagnostic::dump(&input, &path, &diagnostic);
+            if let Err(err) = machine::execute(&input, entry) {
+                match err {
+                    machine::ExecutionError::Diagnostic(d) => diagnostic::dump(&input, &path, &d),
+                    machine::ExecutionError::Runtime(e) => eprintln!("error: {e}"),
+                }
             };
         }
     }

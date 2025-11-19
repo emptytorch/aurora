@@ -7,10 +7,37 @@ use crate::{
     value::Value,
 };
 
-pub fn execute(input: &str) -> Result<(), Diagnostic> {
+#[derive(Debug)]
+pub enum ExecutionError {
+    Diagnostic(Diagnostic),
+    Runtime(RuntimeError),
+}
+
+impl From<Diagnostic> for ExecutionError {
+    fn from(value: Diagnostic) -> Self {
+        ExecutionError::Diagnostic(value)
+    }
+}
+
+#[derive(Debug)]
+pub enum RuntimeError {
+    EntryNotFound(String),
+}
+
+impl std::fmt::Display for RuntimeError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            RuntimeError::EntryNotFound(entry) => {
+                write!(f, "I couldn't find any entry named `{entry}`")
+            }
+        }
+    }
+}
+
+pub fn execute(input: &str, entry_name: Option<String>) -> Result<(), ExecutionError> {
     let file = validator::validate(input)?;
     let mut machine = Machine::new();
-    machine.execute(file)
+    machine.execute(file, entry_name)
 }
 
 struct Machine {
@@ -26,20 +53,35 @@ impl<'input> Machine {
         }
     }
 
-    fn execute(&mut self, source_file: SourceFile<'input>) -> Result<(), Diagnostic> {
+    fn execute(
+        &mut self,
+        source_file: SourceFile<'input>,
+        entry_name: Option<String>,
+    ) -> Result<(), ExecutionError> {
         for (name, expr) in &source_file.globals {
             let value = self.eval_expr(expr)?;
             self.names.insert(name.to_string(), value);
         }
 
-        for entry in source_file.entries.values() {
-            self.execute_entry(entry)?;
-        }
+        match entry_name {
+            Some(name) => {
+                let entry = source_file
+                    .entries
+                    .get(name.as_str())
+                    .ok_or(ExecutionError::Runtime(RuntimeError::EntryNotFound(name)))?;
+                self.execute_entry(entry)
+            }
+            None => {
+                for entry in source_file.entries.values() {
+                    self.execute_entry(entry)?;
+                }
 
-        Ok(())
+                Ok(())
+            }
+        }
     }
 
-    fn execute_entry(&self, entry: &Entry<'input>) -> Result<(), Diagnostic> {
+    fn execute_entry(&self, entry: &Entry<'input>) -> Result<(), ExecutionError> {
         let Some(request) = &entry.request else {
             println!(
                 "I could not find any request in entry `{}`. Skipping...",
@@ -85,7 +127,7 @@ impl<'input> Machine {
         header_map
     }
 
-    fn eval_expr(&self, expr: &Expr) -> Result<Value, Diagnostic> {
+    fn eval_expr(&self, expr: &Expr) -> Result<Value, ExecutionError> {
         match &expr.kind {
             ExprKind::StringLiteral(parts) => {
                 let mut out = String::new();
