@@ -1,8 +1,8 @@
-use std::collections::HashMap;
+use indexmap::IndexMap;
 
 pub struct SourceFile<'input> {
-    pub entries: HashMap<&'input str, Entry<'input>>,
-    pub globals: HashMap<&'input str, Expr>,
+    pub entries: IndexMap<&'input str, Entry<'input>>,
+    pub globals: IndexMap<&'input str, Expr>,
 }
 
 #[derive(Debug, Clone)]

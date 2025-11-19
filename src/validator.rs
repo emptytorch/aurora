@@ -1,4 +1,4 @@
-use std::collections::{HashMap, hash_map};
+use indexmap::{IndexMap, map};
 
 use crate::{
     ast,
@@ -15,15 +15,15 @@ pub fn validate<'input>(input: &'input str) -> Result<validated::SourceFile<'inp
 }
 
 struct Validator<'input> {
-    globals: HashMap<&'input str, validated::Expr>,
-    entries: HashMap<&'input str, validated::Entry<'input>>,
+    globals: IndexMap<&'input str, validated::Expr>,
+    entries: IndexMap<&'input str, validated::Entry<'input>>,
 }
 
 impl<'input> Validator<'input> {
     fn new() -> Self {
         Self {
-            globals: HashMap::new(),
-            entries: HashMap::new(),
+            globals: IndexMap::new(),
+            entries: IndexMap::new(),
         }
     }
 
@@ -37,7 +37,7 @@ impl<'input> Validator<'input> {
                     let entry_name = entry.name;
                     let validated_entry = self.validate_entry(entry)?;
                     match self.entries.entry(entry_name.text) {
-                        hash_map::Entry::Occupied(_) => {
+                        map::Entry::Occupied(_) => {
                             return Err(Diagnostic::error(
                                 format!(
                                     "The entry `{}` is defined multiple times",
@@ -50,19 +50,19 @@ impl<'input> Validator<'input> {
                                 Level::Error,
                             ));
                         }
-                        hash_map::Entry::Vacant(vacant) => _ = vacant.insert(validated_entry),
+                        map::Entry::Vacant(vacant) => _ = vacant.insert(validated_entry),
                     }
                 }
                 ast::ItemKind::Const(name, expr) => {
                     let validated_expr = self.validate_expr(expr)?;
                     match self.globals.entry(name.text) {
-                        hash_map::Entry::Occupied(_) => {
+                        map::Entry::Occupied(_) => {
                             return Err(Diagnostic::error(
                                 format!("The variable `{}` is defined multiple times", name.text),
                                 name.span,
                             ));
                         }
-                        hash_map::Entry::Vacant(vacant) => _ = vacant.insert(validated_expr),
+                        map::Entry::Vacant(vacant) => _ = vacant.insert(validated_expr),
                     }
                 }
             }
