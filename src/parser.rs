@@ -93,6 +93,7 @@ impl<'input> Parser<'input> {
             Some(&Token {
                 kind: TokenKind::HttpMethod(token::HttpMethod::Get),
                 span: method_span,
+                ..
             }) => {
                 self.bump();
                 let url = self.parse_expr()?;
@@ -108,6 +109,7 @@ impl<'input> Parser<'input> {
             Some(&Token {
                 kind: TokenKind::HttpMethod(token::HttpMethod::Post),
                 span: method_span,
+                ..
             }) => {
                 self.bump();
                 let url = self.parse_expr()?;
@@ -123,6 +125,7 @@ impl<'input> Parser<'input> {
             Some(&Token {
                 kind: TokenKind::Delim(Delim::OpenBrack),
                 span: open_span,
+                ..
             }) => {
                 self.bump();
                 let name = self.parse_name().ok_or(
@@ -154,6 +157,7 @@ impl<'input> Parser<'input> {
             Some(&Token {
                 kind: TokenKind::Identifier(s),
                 span,
+                ..
             }) => {
                 self.bump();
                 Ok(Some(Expr {
@@ -164,6 +168,7 @@ impl<'input> Parser<'input> {
             Some(&Token {
                 kind: TokenKind::String(ref parts),
                 span,
+                ..
             }) => {
                 let parts = parts.clone();
                 self.bump();
@@ -189,6 +194,7 @@ impl<'input> Parser<'input> {
             Some(&Token {
                 kind: TokenKind::Integer(s),
                 span,
+                ..
             }) => {
                 self.bump();
                 Ok(Some(Expr {
@@ -199,6 +205,7 @@ impl<'input> Parser<'input> {
             Some(&Token {
                 kind: TokenKind::Float(s),
                 span,
+                ..
             }) => {
                 self.bump();
                 Ok(Some(Expr {
@@ -209,6 +216,7 @@ impl<'input> Parser<'input> {
             Some(&Token {
                 kind: TokenKind::Keyword(Keyword::Null),
                 span,
+                ..
             }) => {
                 self.bump();
                 Ok(Some(Expr {
@@ -219,6 +227,7 @@ impl<'input> Parser<'input> {
             Some(&Token {
                 kind: TokenKind::Delim(Delim::OpenBrace),
                 span: open_span,
+                ..
             }) => {
                 self.bump();
                 let fields = self.parse_record_fields()?;
@@ -285,6 +294,7 @@ impl<'input> Parser<'input> {
         if let Some(&Token {
             kind: TokenKind::Identifier(text),
             span,
+            ..
         }) = self.peek()
         {
             self.bump();
@@ -310,6 +320,7 @@ impl<'input> Parser<'input> {
         if let Some(&Token {
             kind: TokenKind::Keyword(kw2),
             span,
+            ..
         }) = self.peek()
             && kw == kw2
         {
@@ -324,6 +335,7 @@ impl<'input> Parser<'input> {
         if let Some(&Token {
             kind: TokenKind::Delim(delim2),
             span,
+            ..
         }) = self.peek()
             && delim == delim2
         {
