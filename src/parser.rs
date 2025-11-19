@@ -80,7 +80,7 @@ impl<'input> Parser<'input> {
         }
 
         let expr = self.parse_expr()?;
-        // TODO: expect newline
+        self.expect_newline()?;
         let span = const_span.to(expr.span);
         Ok(Item {
             kind: ItemKind::Const(name, expr),
@@ -97,6 +97,7 @@ impl<'input> Parser<'input> {
             }) => {
                 self.bump();
                 let url = self.parse_expr()?;
+                self.expect_newline()?;
                 let url_span = url.span;
                 Ok(Some(EntryItem {
                     kind: EntryItemKind::Request(Request {
@@ -350,6 +351,15 @@ impl<'input> Parser<'input> {
 
             Err(Diagnostic::error("Expected delimiter", self.peek_span())
                 .primary_label(label_message, Level::Error))
+        }
+    }
+
+    fn expect_newline(&mut self) -> Result<(), Diagnostic> {
+        match self.peek() {
+            None => Ok(()),
+            Some(token) if token.skipped_newline => Ok(()),
+            Some(token) => Err(Diagnostic::error("Missing newline", token.span)
+                .primary_label("I was expecting a newline here", Level::Error)),
         }
     }
 
