@@ -239,6 +239,54 @@ impl<'input> Parser<'input> {
                     span,
                 }))
             }
+            Some(&Token {
+                kind: TokenKind::Delim(Delim::OpenBrack),
+                span: open_span,
+                ..
+            }) => {
+                self.bump();
+                let mut elements = vec![];
+
+                loop {
+                    match self.peek() {
+                        Some(Token {
+                            kind: TokenKind::Delim(Delim::CloseBrack),
+                            ..
+                        })
+                        | None => break,
+                        _ => {}
+                    }
+
+                    let element = self.parse_expr()?;
+                    elements.push(element);
+
+                    if self.eat(TokenKind::Comma).is_none() {
+                        match self.peek() {
+                            Some(Token {
+                                kind: TokenKind::Delim(Delim::CloseBrack),
+                                ..
+                            }) => {
+                                break;
+                            }
+                            Some(_) => {
+                                return Err(Diagnostic::error(
+                                    "Unexpected token",
+                                    self.peek_span(),
+                                )
+                                .primary_label("I was expecting a comma here", Level::Error));
+                            }
+                            None => break,
+                        }
+                    }
+                }
+
+                let close_span = self.expect_delim(Delim::CloseBrack)?;
+                let span = open_span.to(close_span);
+                Ok(Some(Expr {
+                    kind: ExprKind::Array(elements),
+                    span,
+                }))
+            }
             _ => Ok(None),
         }
     }

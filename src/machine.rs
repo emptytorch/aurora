@@ -157,6 +157,14 @@ impl<'input> Machine {
                 }
                 Ok(Value::Dictionary(map))
             }
+            ExprKind::Array(elems) => {
+                let mut values = Vec::with_capacity(elems.len());
+                for elem in elems {
+                    let value = self.eval_expr(elem)?;
+                    values.push(value);
+                }
+                Ok(Value::Array(values))
+            }
             ExprKind::NameRef(name) => Ok(self.names[name].clone()),
         }
     }

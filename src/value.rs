@@ -7,6 +7,7 @@ pub enum Value {
     Float(f64),
     Null,
     Dictionary(HashMap<String, Value>),
+    Array(Vec<Value>),
 }
 
 impl std::fmt::Display for Value {
@@ -25,6 +26,14 @@ impl std::fmt::Display for Value {
                     .collect::<Vec<_>>()
                     .join(", ");
                 write!(f, "{{{}}}", inner)
+            }
+            Value::Array(a) => {
+                let inner = a
+                    .iter()
+                    .map(|it| format!("{it}"))
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                write!(f, "[{inner}]")
             }
         }
     }
@@ -60,6 +69,10 @@ impl Value {
                 }
                 serde_json::Value::Object(map)
             }
+            Value::Array(a) => {
+                let elems = a.iter().map(|it| it.to_json()).collect();
+                serde_json::Value::Array(elems)
+            }
         }
     }
 
@@ -78,6 +91,14 @@ impl Value {
                     .collect::<Vec<_>>()
                     .join(", ");
                 format!("{{{}}}", inner)
+            }
+            Value::Array(a) => {
+                let elems = a
+                    .iter()
+                    .map(|it| it.stringify())
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                format!("[{elems}]")
             }
         }
     }
@@ -179,6 +200,18 @@ mod tests {
     }
 
     #[test]
+    fn stringify_array_single_element() {
+        let a = Value::Array(vec![Value::Integer(1)]);
+        assert_eq!(a.stringify(), "[1]");
+    }
+
+    #[test]
+    fn stringify_array_multiple_elements() {
+        let a = Value::Array(vec![Value::Integer(1), Value::Integer(2)]);
+        assert_eq!(a.stringify(), "[1, 2]");
+    }
+
+    #[test]
     fn display_string() {
         let v = Value::String("hello".to_string());
         assert_eq!(format!("{}", v), "hello");
@@ -217,5 +250,17 @@ mod tests {
 
         let v = Value::Dictionary(outer);
         assert_eq!(format!("{}", v), "{inner: {x: 5}}");
+    }
+
+    #[test]
+    fn display_array_single_element() {
+        let a = Value::Array(vec![Value::Integer(1)]);
+        assert_eq!(format!("{a}"), "[1]");
+    }
+
+    #[test]
+    fn display_array_multiple_element() {
+        let a = Value::Array(vec![Value::Integer(1), Value::Integer(2)]);
+        assert_eq!(format!("{a}"), "[1, 2]");
     }
 }

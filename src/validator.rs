@@ -259,6 +259,7 @@ impl<'input> Validator<'input> {
                 ty: validated::Ty::Null,
             }),
             ast::ExprKind::Dictionary(fields) => self.validate_dictionary_fields(fields),
+            ast::ExprKind::Array(elements) => self.validate_array_elements(elements, expr.span),
             ast::ExprKind::NameRef(name) => {
                 if let Some(expr) = self.globals.get(name) {
                     Ok(validated::Expr {
@@ -299,6 +300,51 @@ impl<'input> Validator<'input> {
             kind: validated::ExprKind::Dictionary(validated_fields),
             ty: validated::Ty::Dictionary(value_types),
         })
+    }
+
+    fn validate_array_elements(
+        &self,
+        elements: Vec<ast::Expr<'input>>,
+        array_span: Span,
+    ) -> Result<validated::Expr, Diagnostic> {
+        let mut validated_exprs = Vec::with_capacity(elements.len());
+        for elem in elements {
+            let validated_expr = self.validate_expr(elem)?;
+            validated_exprs.push(validated_expr);
+        }
+
+        let ty = self.validate_array_homogenity(&validated_exprs, array_span)?;
+        Ok(validated::Expr {
+            kind: validated::ExprKind::Array(validated_exprs),
+            ty: validated::Ty::Array(Box::new(ty)),
+        })
+    }
+
+    fn validate_array_homogenity(
+        &self,
+        elements: &[validated::Expr],
+        array_span: Span,
+    ) -> Result<validated::Ty, Diagnostic> {
+        if elements.is_empty() {
+            return Ok(validated::Ty::Unknown);
+        }
+
+        let first_ty = elements[0].ty.clone();
+        for elem in elements.iter().skip(1) {
+            if elem.ty != first_ty {
+                // TODO: improved error message
+                return Err(Diagnostic::error(
+                    "Array elements must have the same type",
+                    array_span,
+                )
+                .primary_label(
+                    format!("I was expecting all elements to have type `{first_ty}` here"),
+                    Level::Error,
+                ));
+            }
+        }
+
+        Ok(first_ty)
     }
 }
 
