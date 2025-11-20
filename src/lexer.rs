@@ -186,6 +186,7 @@ impl<'input> Lexer<'input> {
             "GET" => TokenKind::HttpMethod(HttpMethod::Get),
             "POST" => TokenKind::HttpMethod(HttpMethod::Post),
             "PUT" => TokenKind::HttpMethod(HttpMethod::Put),
+            "PATCH" => TokenKind::HttpMethod(HttpMethod::Patch),
             _ => TokenKind::Identifier(text),
         }
     }
@@ -329,6 +330,18 @@ mod test {
     }
 
     #[test]
+    fn lex_identifier_patch() {
+        assert_token(
+            "patch",
+            Token {
+                kind: TokenKind::Identifier("patch"),
+                span: Span::new(0, 5),
+                skipped_newline: false,
+            },
+        );
+    }
+
+    #[test]
     fn lex_http_method_get() {
         assert_token(
             "GET",
@@ -359,6 +372,18 @@ mod test {
             Token {
                 kind: TokenKind::HttpMethod(HttpMethod::Put),
                 span: Span::new(0, 3),
+                skipped_newline: false,
+            },
+        );
+    }
+
+    #[test]
+    fn lex_http_method_patch() {
+        assert_token(
+            "PATCH",
+            Token {
+                kind: TokenKind::HttpMethod(HttpMethod::Patch),
+                span: Span::new(0, 5),
                 skipped_newline: false,
             },
         );

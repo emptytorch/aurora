@@ -140,6 +140,22 @@ impl<'input> Parser<'input> {
                 }))
             }
             Some(&Token {
+                kind: TokenKind::HttpMethod(token::HttpMethod::Patch),
+                span: method_span,
+                ..
+            }) => {
+                self.bump();
+                let url = self.parse_expr()?;
+                let url_span = url.span;
+                Ok(Some(EntryItem {
+                    kind: EntryItemKind::Request(Request {
+                        method: HttpMethod::Patch,
+                        url,
+                    }),
+                    span: method_span.to(url_span),
+                }))
+            }
+            Some(&Token {
                 kind: TokenKind::Delim(Delim::OpenBrack),
                 span: open_span,
                 ..
