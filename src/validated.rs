@@ -23,6 +23,7 @@ pub struct Request {
 pub enum HttpMethod {
     Get,
     Post,
+    Put,
 }
 
 #[derive(Debug, Clone)]

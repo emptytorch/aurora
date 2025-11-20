@@ -185,6 +185,7 @@ impl<'input> Lexer<'input> {
             "null" => TokenKind::Keyword(Keyword::Null),
             "GET" => TokenKind::HttpMethod(HttpMethod::Get),
             "POST" => TokenKind::HttpMethod(HttpMethod::Post),
+            "PUT" => TokenKind::HttpMethod(HttpMethod::Put),
             _ => TokenKind::Identifier(text),
         }
     }
@@ -316,6 +317,18 @@ mod test {
     }
 
     #[test]
+    fn lex_identifier_put() {
+        assert_token(
+            "put",
+            Token {
+                kind: TokenKind::Identifier("put"),
+                span: Span::new(0, 3),
+                skipped_newline: false,
+            },
+        );
+    }
+
+    #[test]
     fn lex_http_method_get() {
         assert_token(
             "GET",
@@ -334,6 +347,18 @@ mod test {
             Token {
                 kind: TokenKind::HttpMethod(HttpMethod::Post),
                 span: Span::new(0, 4),
+                skipped_newline: false,
+            },
+        );
+    }
+
+    #[test]
+    fn lex_http_method_put() {
+        assert_token(
+            "PUT",
+            Token {
+                kind: TokenKind::HttpMethod(HttpMethod::Put),
+                span: Span::new(0, 3),
                 skipped_newline: false,
             },
         );

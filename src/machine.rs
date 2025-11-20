@@ -94,6 +94,7 @@ impl<'input> Machine {
         let mut req = match request.method {
             HttpMethod::Get => self.client.get(url.string()),
             HttpMethod::Post => self.client.post(url.string()),
+            HttpMethod::Put => self.client.put(url.string()),
         };
 
         if let Some(expr) = &entry.headers {

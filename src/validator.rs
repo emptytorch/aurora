@@ -110,6 +110,7 @@ impl<'input> Validator<'input> {
                                 method: match request.method {
                                     ast::HttpMethod::Get => validated::HttpMethod::Get,
                                     ast::HttpMethod::Post => validated::HttpMethod::Post,
+                                    ast::HttpMethod::Put => validated::HttpMethod::Put,
                                 },
                                 url: validated_url,
                             })
