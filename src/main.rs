@@ -1,5 +1,6 @@
 use std::path::PathBuf;
 
+use anyhow::Context;
 use clap::{Parser, Subcommand};
 
 mod ast;
@@ -29,10 +30,11 @@ enum Command {
     },
 }
 
-fn main() {
+fn main() -> anyhow::Result<()> {
     match Args::parse().cmd {
         Command::Run { path, entry } => {
-            let input = std::fs::read_to_string(&path).expect("could not read .au file");
+            let input = std::fs::read_to_string(&path)
+                .with_context(|| format!("could not read `{}`", path.to_string_lossy()))?;
             match machine::execute(&input, entry) {
                 Ok(responses) => {
                     for response in responses {
@@ -46,4 +48,6 @@ fn main() {
             }
         }
     }
+
+    Ok(())
 }
