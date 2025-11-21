@@ -96,6 +96,7 @@ impl<'input> Machine {
             HttpMethod::Post => self.client.post(url.string()),
             HttpMethod::Put => self.client.put(url.string()),
             HttpMethod::Patch => self.client.patch(url.string()),
+            HttpMethod::Delete => self.client.delete(url.string()),
         };
 
         if let Some(expr) = &entry.headers {

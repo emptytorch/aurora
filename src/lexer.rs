@@ -187,6 +187,7 @@ impl<'input> Lexer<'input> {
             "POST" => TokenKind::HttpMethod(HttpMethod::Post),
             "PUT" => TokenKind::HttpMethod(HttpMethod::Put),
             "PATCH" => TokenKind::HttpMethod(HttpMethod::Patch),
+            "DELETE" => TokenKind::HttpMethod(HttpMethod::Delete),
             _ => TokenKind::Identifier(text),
         }
     }
@@ -342,6 +343,18 @@ mod test {
     }
 
     #[test]
+    fn lex_identifier_delete() {
+        assert_token(
+            "delete",
+            Token {
+                kind: TokenKind::Identifier("delete"),
+                span: Span::new(0, 6),
+                skipped_newline: false,
+            },
+        );
+    }
+
+    #[test]
     fn lex_http_method_get() {
         assert_token(
             "GET",
@@ -384,6 +397,18 @@ mod test {
             Token {
                 kind: TokenKind::HttpMethod(HttpMethod::Patch),
                 span: Span::new(0, 5),
+                skipped_newline: false,
+            },
+        );
+    }
+
+    #[test]
+    fn lex_http_method_delete() {
+        assert_token(
+            "DELETE",
+            Token {
+                kind: TokenKind::HttpMethod(HttpMethod::Delete),
+                span: Span::new(0, 6),
                 skipped_newline: false,
             },
         );

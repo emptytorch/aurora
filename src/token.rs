@@ -34,6 +34,8 @@ pub enum HttpMethod {
     Put,
     /// `PATCH`
     Patch,
+    /// `DELETE`
+    Delete,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

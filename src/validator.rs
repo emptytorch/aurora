@@ -112,6 +112,7 @@ impl<'input> Validator<'input> {
                                     ast::HttpMethod::Post => validated::HttpMethod::Post,
                                     ast::HttpMethod::Put => validated::HttpMethod::Put,
                                     ast::HttpMethod::Patch => validated::HttpMethod::Patch,
+                                    ast::HttpMethod::Delete => validated::HttpMethod::Delete,
                                 },
                                 url: validated_url,
                             })
