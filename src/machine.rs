@@ -8,6 +8,33 @@ use crate::{
 };
 
 #[derive(Debug)]
+pub struct Response {
+    pub status: u16,
+    pub headers: Vec<(String, String)>,
+    pub body: Vec<u8>,
+}
+
+impl Response {
+    pub fn pretty_body(&self) -> String {
+        let content_type = self
+            .headers
+            .iter()
+            .find(|(n, _)| n.eq_ignore_ascii_case("Content-Type"))
+            .map(|(_, v)| v.as_str())
+            .unwrap_or_default();
+
+        let body_str = String::from_utf8_lossy(&self.body);
+        if content_type.contains("application/json") {
+            return serde_json::from_str::<serde_json::Value>(&body_str)
+                .map(|v| serde_json::to_string_pretty(&v).unwrap_or_else(|_| body_str.to_string()))
+                .unwrap_or_else(|_| body_str.to_string());
+        }
+
+        body_str.to_string()
+    }
+}
+
+#[derive(Debug)]
 pub enum ExecutionError {
     Diagnostic(Diagnostic),
     Runtime(RuntimeError),
@@ -34,7 +61,7 @@ impl std::fmt::Display for RuntimeError {
     }
 }
 
-pub fn execute(input: &str, entry_name: Option<String>) -> Result<(), ExecutionError> {
+pub fn execute(input: &str, entry_name: Option<String>) -> Result<Vec<Response>, ExecutionError> {
     let file = validator::validate(input)?;
     let mut machine = Machine::new();
     machine.execute(file, entry_name)
@@ -57,7 +84,7 @@ impl<'input> Machine {
         &mut self,
         source_file: SourceFile<'input>,
         entry_name: Option<String>,
-    ) -> Result<(), ExecutionError> {
+    ) -> Result<Vec<Response>, ExecutionError> {
         for (name, expr) in &source_file.globals {
             let value = self.eval_expr(expr)?;
             self.names.insert(name.to_string(), value);
@@ -69,25 +96,33 @@ impl<'input> Machine {
                     .entries
                     .get(name.as_str())
                     .ok_or(ExecutionError::Runtime(RuntimeError::EntryNotFound(name)))?;
-                self.execute_entry(entry)
+
+                if let Some(response) = self.execute_entry(entry)? {
+                    Ok(vec![response])
+                } else {
+                    Ok(vec![])
+                }
             }
             None => {
+                let mut responses = vec![];
                 for entry in source_file.entries.values() {
-                    self.execute_entry(entry)?;
+                    if let Some(response) = self.execute_entry(entry)? {
+                        responses.push(response);
+                    }
                 }
 
-                Ok(())
+                Ok(responses)
             }
         }
     }
 
-    fn execute_entry(&self, entry: &Entry<'input>) -> Result<(), ExecutionError> {
+    fn execute_entry(&self, entry: &Entry<'input>) -> Result<Option<Response>, ExecutionError> {
         let Some(request) = &entry.request else {
             println!(
                 "I could not find any request in entry `{}`. Skipping...",
                 entry.name
             );
-            return Ok(());
+            return Ok(None);
         };
 
         let url = self.eval_expr(&request.url)?;
@@ -112,10 +147,16 @@ impl<'input> Machine {
 
         // TODO: error handling
         let response = req.send().unwrap();
-        // TODO: format
-        println!("{:#?}", response);
-
-        Ok(())
+        Ok(Some(Response {
+            status: response.status().as_u16(),
+            headers: response
+                .headers()
+                .iter()
+                .map(|(name, value)| (name.to_string(), value.to_str().unwrap().to_string()))
+                .collect(),
+            // TODO: error handling
+            body: response.bytes().unwrap().to_vec(),
+        }))
     }
 
     fn map_headers(&self, dictionary: &HashMap<String, Value>) -> reqwest::header::HeaderMap {

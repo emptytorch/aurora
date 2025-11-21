@@ -33,12 +33,17 @@ fn main() {
     match Args::parse().cmd {
         Command::Run { path, entry } => {
             let input = std::fs::read_to_string(&path).expect("could not read .au file");
-            if let Err(err) = machine::execute(&input, entry) {
-                match err {
+            match machine::execute(&input, entry) {
+                Ok(responses) => {
+                    for response in responses {
+                        println!("{}", response.pretty_body());
+                    }
+                }
+                Err(err) => match err {
                     machine::ExecutionError::Diagnostic(d) => diagnostic::dump(&input, &path, &d),
                     machine::ExecutionError::Runtime(e) => eprintln!("error: {e}"),
-                }
-            };
+                },
+            }
         }
     }
 }
