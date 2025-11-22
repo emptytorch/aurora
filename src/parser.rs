@@ -383,7 +383,6 @@ impl<'input> Parser<'input> {
         }
 
         let value = self.parse_expr()?;
-        // TODO: expect newline
         Ok(DictionaryField { key, value })
     }
 
