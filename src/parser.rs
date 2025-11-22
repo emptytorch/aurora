@@ -279,7 +279,7 @@ impl<'input> Parser<'input> {
                 ..
             }) => {
                 self.bump();
-                let fields = self.parse_record_fields()?;
+                let fields = self.parse_dictionary_fields()?;
                 let close_span = self.expect_delim(Delim::CloseBrace)?;
                 let span = open_span.to(close_span);
                 Ok(Some(Expr {
@@ -339,7 +339,7 @@ impl<'input> Parser<'input> {
         }
     }
 
-    fn parse_record_fields(&mut self) -> Result<Vec<DictionaryField<'input>>, Diagnostic> {
+    fn parse_dictionary_fields(&mut self) -> Result<Vec<DictionaryField<'input>>, Diagnostic> {
         let mut fields = vec![];
 
         loop {
@@ -352,7 +352,7 @@ impl<'input> Parser<'input> {
                 _ => {}
             }
 
-            let field = self.parse_record_field()?;
+            let field = self.parse_dictionary_field()?;
             fields.push(field);
 
             if self.eat(TokenKind::Comma).is_none() {
@@ -375,7 +375,7 @@ impl<'input> Parser<'input> {
         Ok(fields)
     }
 
-    fn parse_record_field(&mut self) -> Result<DictionaryField<'input>, Diagnostic> {
+    fn parse_dictionary_field(&mut self) -> Result<DictionaryField<'input>, Diagnostic> {
         let key = self.parse_expr()?;
         if self.eat(TokenKind::Colon).is_none() {
             return Err(Diagnostic::error("Unexpected token", self.peek_span())
