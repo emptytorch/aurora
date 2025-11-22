@@ -23,7 +23,7 @@ struct Args {
 #[derive(Subcommand)]
 enum Command {
     Run {
-        /// Path to the `.au` file to execute.
+        /// Path to the `.au` file to execute
         path: PathBuf,
         /// Name of an entry to execute
         #[arg(long)]
