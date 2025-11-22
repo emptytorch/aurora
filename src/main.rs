@@ -26,6 +26,7 @@ enum Command {
         /// Path to the `.au` file to execute.
         path: PathBuf,
         /// Name of an entry to execute
+        #[arg(long)]
         entry: Option<String>,
     },
 }
