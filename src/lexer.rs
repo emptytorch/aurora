@@ -692,6 +692,21 @@ mod test {
     }
 
     #[test]
+    fn lex_string_unterminated_string() {
+        assert_err(r#"""#, "Unterminated string literal");
+    }
+
+    #[test]
+    fn lex_string_unterminated_string_after_text() {
+        assert_err(r#""foo"#, "Unterminated string literal");
+    }
+
+    #[test]
+    fn lex_string_unterminated_string_with_escape() {
+        assert_err(r#""foo\""#, "Unterminated string literal");
+    }
+
+    #[test]
     fn lex_colon() {
         assert_token(
             ":",
@@ -849,6 +864,14 @@ GET "example.com/"
                 },
             ],
         );
+    }
+
+    fn assert_err(input: &str, expected: &str) {
+        let Err(diag) = lex(input) else {
+            panic!("Expected error, got success");
+        };
+
+        assert_eq!(diag.message, expected);
     }
 
     fn assert_token(input: &str, expected: Token) {
