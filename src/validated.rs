@@ -1,5 +1,7 @@
 use indexmap::IndexMap;
 
+use crate::span::Span;
+
 pub struct SourceFile<'input> {
     pub entries: IndexMap<&'input str, Entry<'input>>,
     pub globals: IndexMap<&'input str, Expr>,
@@ -31,6 +33,7 @@ pub enum HttpMethod {
 #[derive(Debug, Clone)]
 pub struct Expr {
     pub kind: ExprKind,
+    pub span: Span,
     pub ty: Ty,
 }
 

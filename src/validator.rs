@@ -234,6 +234,7 @@ impl<'input> Validator<'input> {
                 }
                 Ok(validated::Expr {
                     kind: validated::ExprKind::StringLiteral(validated_parts),
+                    span: expr.span,
                     ty: validated::Ty::String,
                 })
             }
@@ -244,6 +245,7 @@ impl<'input> Validator<'input> {
 
                 Ok(validated::Expr {
                     kind: validated::ExprKind::IntegerLiteral(value),
+                    span: expr.span,
                     ty: validated::Ty::Integer,
                 })
             }
@@ -254,19 +256,22 @@ impl<'input> Validator<'input> {
 
                 Ok(validated::Expr {
                     kind: validated::ExprKind::FloatLiteral(value),
+                    span: expr.span,
                     ty: validated::Ty::Float,
                 })
             }
             ast::ExprKind::NullLiteral => Ok(validated::Expr {
                 kind: validated::ExprKind::NullLiteral,
+                span: expr.span,
                 ty: validated::Ty::Null,
             }),
-            ast::ExprKind::Dictionary(fields) => self.validate_dictionary_fields(fields),
+            ast::ExprKind::Dictionary(fields) => self.validate_dictionary_fields(fields, expr.span),
             ast::ExprKind::Array(elements) => self.validate_array_elements(elements, expr.span),
             ast::ExprKind::NameRef(name) => {
                 if let Some(expr) = self.globals.get(name) {
                     Ok(validated::Expr {
                         kind: validated::ExprKind::NameRef(name.to_string()),
+                        span: expr.span,
                         ty: expr.ty.clone(),
                     })
                 } else {
@@ -280,6 +285,7 @@ impl<'input> Validator<'input> {
     fn validate_dictionary_fields(
         &self,
         fields: Vec<ast::DictionaryField<'input>>,
+        dictionary_span: Span,
     ) -> Result<validated::Expr, Diagnostic> {
         let mut validated_fields = Vec::with_capacity(fields.len());
 
@@ -301,6 +307,7 @@ impl<'input> Validator<'input> {
 
         Ok(validated::Expr {
             kind: validated::ExprKind::Dictionary(validated_fields),
+            span: dictionary_span,
             ty: validated::Ty::Dictionary(value_types),
         })
     }
@@ -319,6 +326,7 @@ impl<'input> Validator<'input> {
         let ty = self.validate_array_homogenity(&validated_exprs, array_span)?;
         Ok(validated::Expr {
             kind: validated::ExprKind::Array(validated_exprs),
+            span: array_span,
             ty: validated::Ty::Array(Box::new(ty)),
         })
     }
