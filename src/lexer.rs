@@ -707,6 +707,26 @@ mod test {
     }
 
     #[test]
+    fn lex_string_unterminated_template_empty() {
+        assert_err(r#""{{"#, "Unterminated template");
+    }
+
+    #[test]
+    fn lex_string_unterminated_template_missing_closing_braces() {
+        assert_err(r#""foo {{ bar"#, "Unterminated template");
+    }
+
+    #[test]
+    fn lex_string_unterminated_template_single_closing_brace() {
+        assert_err(r#""foo {{ bar }"#, "Unterminated template");
+    }
+
+    #[test]
+    fn lex_string_unterminated_template_due_to_quote() {
+        assert_err(r#""foo {{ bar " baz }}""#, "Unterminated template");
+    }
+
+    #[test]
     fn lex_colon() {
         assert_token(
             ":",
