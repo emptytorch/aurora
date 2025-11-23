@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use anyhow::Context;
 use clap::{Parser, Subcommand};
@@ -31,23 +31,28 @@ enum Command {
     },
 }
 
-fn main() -> anyhow::Result<()> {
-    match Args::parse().cmd {
-        Command::Run { path, entry } => {
-            let input = std::fs::read_to_string(&path)
-                .with_context(|| format!("could not read `{}`", path.to_string_lossy()))?;
-            match machine::execute(&input, entry) {
-                Ok(responses) => {
-                    for response in responses {
-                        println!("{}", response.pretty_body());
-                    }
-                }
-                Err(err) => match err {
-                    machine::ExecutionError::Diagnostic(d) => diagnostic::dump(&input, &path, &d),
-                    machine::ExecutionError::Runtime(e) => eprintln!("error: {e}"),
-                },
+fn run(path: &Path, entry: Option<String>) -> anyhow::Result<()> {
+    let input = std::fs::read_to_string(path)
+        .with_context(|| format!("could not read `{}`", path.to_string_lossy()))?;
+
+    match machine::execute(&input, entry) {
+        Ok(responses) => {
+            for response in responses {
+                println!("{}", response.pretty_body());
             }
         }
+        Err(err) => match err {
+            machine::ExecutionError::Diagnostic(d) => diagnostic::dump(&input, path, &d),
+            machine::ExecutionError::Runtime(e) => eprintln!("error: {e}"),
+        },
+    }
+
+    Ok(())
+}
+
+fn main() -> anyhow::Result<()> {
+    match Args::parse().cmd {
+        Command::Run { path, entry } => run(&path, entry)?,
     }
 
     Ok(())
