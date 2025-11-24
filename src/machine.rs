@@ -85,9 +85,9 @@ impl<'input> Machine {
         source_file: SourceFile<'input>,
         entry_name: Option<String>,
     ) -> Result<Vec<Response>, ExecutionError> {
-        for (name, expr) in &source_file.globals {
-            let value = self.eval_expr(expr)?;
-            self.names.insert(name.to_string(), value);
+        for konst in source_file.globals.values() {
+            let value = self.eval_expr(&konst.expr)?;
+            self.names.insert(konst.name.text.to_string(), value);
         }
 
         match entry_name {

@@ -15,7 +15,7 @@ pub fn validate<'input>(input: &'input str) -> Result<validated::SourceFile<'inp
 }
 
 struct Validator<'input> {
-    globals: IndexMap<&'input str, validated::Expr>,
+    globals: IndexMap<&'input str, validated::Const<'input>>,
     entries: IndexMap<&'input str, validated::Entry<'input>>,
 }
 
@@ -61,13 +61,30 @@ impl<'input> Validator<'input> {
                 ast::ItemKind::Const(name, expr) => {
                     let validated_expr = self.validate_expr(expr)?;
                     match self.globals.entry(name.text) {
-                        map::Entry::Occupied(_) => {
+                        map::Entry::Occupied(occupied) => {
                             return Err(Diagnostic::error(
                                 format!("The variable `{}` is defined multiple times", name.text),
                                 name.span,
+                            )
+                            .primary_label(
+                                "I have already seen a variable with this name",
+                                Level::Error,
+                            )
+                            .label(
+                                "It was first defined here",
+                                occupied.get().name.span,
+                                Level::Error,
                             ));
                         }
-                        map::Entry::Vacant(vacant) => _ = vacant.insert(validated_expr),
+                        map::Entry::Vacant(vacant) => {
+                            _ = vacant.insert(validated::Const {
+                                name: validated::Name {
+                                    text: name.text,
+                                    span: name.span,
+                                },
+                                expr: validated_expr,
+                            })
+                        }
                     }
                 }
             }
@@ -276,11 +293,11 @@ impl<'input> Validator<'input> {
             ast::ExprKind::Dictionary(fields) => self.validate_dictionary_fields(fields, expr.span),
             ast::ExprKind::Array(elements) => self.validate_array_elements(elements, expr.span),
             ast::ExprKind::NameRef(name) => {
-                if let Some(expr) = self.globals.get(name) {
+                if let Some(konst) = self.globals.get(name) {
                     Ok(validated::Expr {
                         kind: validated::ExprKind::NameRef(name.to_string()),
-                        span: expr.span,
-                        ty: expr.ty.clone(),
+                        span: konst.expr.span,
+                        ty: konst.expr.ty.clone(),
                     })
                 } else {
                     Err(Diagnostic::error("Unknown identifier", expr.span)

@@ -3,8 +3,14 @@ use indexmap::IndexMap;
 use crate::span::Span;
 
 pub struct SourceFile<'input> {
+    pub globals: IndexMap<&'input str, Const<'input>>,
     pub entries: IndexMap<&'input str, Entry<'input>>,
-    pub globals: IndexMap<&'input str, Expr>,
+}
+
+#[derive(Debug, Clone)]
+pub struct Const<'input> {
+    pub name: Name<'input>,
+    pub expr: Expr,
 }
 
 #[derive(Debug, Clone)]
