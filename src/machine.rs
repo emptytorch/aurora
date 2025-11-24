@@ -120,7 +120,7 @@ impl<'input> Machine {
         let Some(request) = &entry.request else {
             println!(
                 "I could not find any request in entry `{}`. Skipping...",
-                entry.name
+                entry.name.text
             );
             return Ok(None);
         };

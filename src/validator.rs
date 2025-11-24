@@ -37,7 +37,7 @@ impl<'input> Validator<'input> {
                     let entry_name = entry.name;
                     let validated_entry = self.validate_entry(entry)?;
                     match self.entries.entry(entry_name.text) {
-                        map::Entry::Occupied(_) => {
+                        map::Entry::Occupied(occupied) => {
                             return Err(Diagnostic::error(
                                 format!(
                                     "The entry `{}` is defined multiple times",
@@ -47,6 +47,11 @@ impl<'input> Validator<'input> {
                             )
                             .primary_label(
                                 "I have already seen an entry with this name",
+                                Level::Error,
+                            )
+                            .label(
+                                "It was first defined here",
+                                occupied.get().name.span,
                                 Level::Error,
                             ));
                         }
@@ -209,7 +214,10 @@ impl<'input> Validator<'input> {
         }
 
         Ok(validated::Entry {
-            name: entry.name.text,
+            name: validated::Name {
+                text: entry.name.text,
+                span: entry.name.span,
+            },
             request: validated_request,
             headers: validated_headers,
             body: validated_body,

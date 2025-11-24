@@ -9,10 +9,16 @@ pub struct SourceFile<'input> {
 
 #[derive(Debug, Clone)]
 pub struct Entry<'input> {
-    pub name: &'input str,
+    pub name: Name<'input>,
     pub request: Option<Request>,
     pub headers: Option<Expr>,
     pub body: Option<Expr>,
+}
+
+#[derive(Debug, Clone)]
+pub struct Name<'input> {
+    pub text: &'input str,
+    pub span: Span,
 }
 
 #[derive(Debug, Clone)]
