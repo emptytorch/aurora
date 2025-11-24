@@ -343,13 +343,17 @@ impl<'input> Validator<'input> {
         let first_ty = elements[0].ty.clone();
         for elem in elements.iter().skip(1) {
             if elem.ty != first_ty {
-                // TODO: improved error message
                 return Err(Diagnostic::error(
                     "Array elements must have the same type",
                     array_span,
                 )
                 .primary_label(
                     format!("I was expecting all elements to have type `{first_ty}` here"),
+                    Level::Error,
+                )
+                .label(
+                    format!("Because this element is of type `{first_ty}`"),
+                    elements[0].span,
                     Level::Error,
                 ));
             }
