@@ -38,7 +38,7 @@ fn run(path: &Path, entry: Option<String>) -> anyhow::Result<()> {
     match machine::execute(&input, entry) {
         Ok(responses) => {
             for response in responses {
-                if (200..300).contains(&response.status) && !response.body.is_empty() {
+                if response.status.is_success() && !response.body.is_empty() {
                     println!("{}", response.pretty_body());
                 }
             }

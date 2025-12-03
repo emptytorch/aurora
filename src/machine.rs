@@ -9,9 +9,18 @@ use crate::{
 
 #[derive(Debug)]
 pub struct Response {
-    pub status: u16,
+    pub status: StatusCode,
     pub headers: Vec<(String, String)>,
     pub body: Vec<u8>,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct StatusCode(u16);
+
+impl StatusCode {
+    pub fn is_success(self) -> bool {
+        (200..300).contains(&self.0)
+    }
 }
 
 impl Response {
@@ -148,7 +157,7 @@ impl<'input> Machine {
         // TODO: error handling
         let response = req.send().unwrap();
         Ok(Some(Response {
-            status: response.status().as_u16(),
+            status: StatusCode(response.status().as_u16()),
             headers: response
                 .headers()
                 .iter()
