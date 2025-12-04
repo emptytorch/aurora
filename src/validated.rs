@@ -80,6 +80,7 @@ pub enum Ty {
     Null,
     Dictionary(Vec<Ty>),
     Array(Box<Ty>),
+    Union(Vec<Ty>),
     Unknown,
 }
 
@@ -92,6 +93,18 @@ impl std::fmt::Display for Ty {
             Ty::Null => write!(f, "null"),
             Ty::Dictionary(_) => write!(f, "dict"),
             Ty::Array(ty) => write!(f, "{ty}[]"),
+            Ty::Union(tys) => {
+                let mut iter = tys.iter();
+                if let Some(first) = iter.next() {
+                    write!(f, "{first}")?;
+                    for ty in iter {
+                        write!(f, " | {ty}")?;
+                    }
+                    Ok(())
+                } else {
+                    write!(f, "?")
+                }
+            }
             Ty::Unknown => write!(f, "?"),
         }
     }

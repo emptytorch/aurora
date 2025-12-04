@@ -348,7 +348,7 @@ impl<'input> Validator<'input> {
             validated_exprs.push(validated_expr);
         }
 
-        let ty = self.validate_array_homogenity(&validated_exprs, array_span)?;
+        let ty = self.infer_array_type(&validated_exprs);
         Ok(validated::Expr {
             kind: validated::ExprKind::Array(validated_exprs),
             span: array_span,
@@ -356,35 +356,47 @@ impl<'input> Validator<'input> {
         })
     }
 
-    fn validate_array_homogenity(
-        &self,
-        elements: &[validated::Expr],
-        array_span: Span,
-    ) -> Result<validated::Ty, Diagnostic> {
-        if elements.is_empty() {
-            return Ok(validated::Ty::Unknown);
-        }
-
-        let first_ty = elements[0].ty.clone();
-        for elem in elements.iter().skip(1) {
-            if elem.ty != first_ty {
-                return Err(Diagnostic::error(
-                    "Array elements must have the same type",
-                    array_span,
-                )
-                .primary_label(
-                    format!("I was expecting all elements to have type `{first_ty}` here"),
-                    Level::Error,
-                )
-                .label(
-                    format!("Because this element is of type `{first_ty}`"),
-                    elements[0].span,
-                    Level::Error,
-                ));
+    fn infer_array_type(&self, elements: &[validated::Expr]) -> validated::Ty {
+        let mut unique_types = vec![];
+        for elem in elements.iter() {
+            let ty = elem.ty.clone();
+            if !unique_types.contains(&ty) {
+                unique_types.push(ty);
             }
         }
 
-        Ok(first_ty)
+        match unique_types.len() {
+            0 => validated::Ty::Unknown,
+            1 => unique_types.pop().unwrap(),
+            _ => self.make_union_ty(unique_types),
+        }
+    }
+
+    fn make_union_ty(&self, tys: Vec<validated::Ty>) -> validated::Ty {
+        let mut flat = vec![];
+
+        for ty in tys {
+            match ty {
+                validated::Ty::Union(inner) => {
+                    for inner_ty in inner {
+                        if !flat.contains(&inner_ty) {
+                            flat.push(inner_ty);
+                        }
+                    }
+                }
+                other => {
+                    if !flat.contains(&other) {
+                        flat.push(other);
+                    }
+                }
+            }
+        }
+
+        match flat.len() {
+            0 => validated::Ty::Unknown,
+            1 => flat.pop().unwrap(),
+            _ => validated::Ty::Union(flat),
+        }
     }
 }
 
