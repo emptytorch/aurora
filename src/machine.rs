@@ -204,7 +204,7 @@ impl<'input> Machine {
             ExprKind::FloatLiteral(f) => Ok(Value::Float(*f)),
             ExprKind::NullLiteral => Ok(Value::Null),
             ExprKind::Dictionary(fields) => {
-                let mut map = IndexMap::new();
+                let mut map = IndexMap::with_capacity(fields.len());
                 for field in fields {
                     let key = self.eval_expr(&field.key)?.string().to_owned();
                     let value = self.eval_expr(&field.value)?;
