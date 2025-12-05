@@ -83,11 +83,9 @@ impl Value {
             Value::Float(f) => f.to_string(),
             Value::Null => "null".to_string(),
             Value::Dictionary(d) => {
-                let mut keys: Vec<&String> = d.keys().collect();
-                keys.sort();
-                let inner = keys
+                let inner = d
                     .iter()
-                    .map(|it| format!("{}: {}", stringify_string(it), d[*it].stringify()))
+                    .map(|(k, v)| format!("{}: {}", stringify_string(k), v.stringify()))
                     .collect::<Vec<_>>()
                     .join(", ");
                 format!("{{{}}}", inner)
