@@ -1,5 +1,7 @@
 use std::{collections::HashMap, str::FromStr};
 
+use indexmap::IndexMap;
+
 use crate::{
     diagnostic::Diagnostic,
     validated::{Entry, Expr, ExprKind, HttpMethod, SourceFile, TemplatePart},
@@ -168,7 +170,7 @@ impl<'input> Machine {
         }))
     }
 
-    fn map_headers(&self, dictionary: &HashMap<String, Value>) -> reqwest::header::HeaderMap {
+    fn map_headers(&self, dictionary: &IndexMap<String, Value>) -> reqwest::header::HeaderMap {
         let mut header_map = reqwest::header::HeaderMap::with_capacity(dictionary.len());
         // TODO: error handling
         for (k, v) in dictionary {
@@ -202,7 +204,7 @@ impl<'input> Machine {
             ExprKind::FloatLiteral(f) => Ok(Value::Float(*f)),
             ExprKind::NullLiteral => Ok(Value::Null),
             ExprKind::Dictionary(fields) => {
-                let mut map = HashMap::new();
+                let mut map = IndexMap::new();
                 for field in fields {
                     let key = self.eval_expr(&field.key)?.string().to_owned();
                     let value = self.eval_expr(&field.value)?;

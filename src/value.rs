@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use indexmap::IndexMap;
 
 #[derive(Debug, Clone)]
 pub enum Value {
@@ -6,7 +6,7 @@ pub enum Value {
     Integer(i64),
     Float(f64),
     Null,
-    Dictionary(HashMap<String, Value>),
+    Dictionary(IndexMap<String, Value>),
     Array(Vec<Value>),
 }
 
@@ -47,7 +47,7 @@ impl Value {
         }
     }
 
-    pub fn dictionary(&self) -> &HashMap<String, Value> {
+    pub fn dictionary(&self) -> &IndexMap<String, Value> {
         match self {
             Value::Dictionary(d) => d,
             _ => panic!("Expected a dictionary"),
@@ -167,7 +167,7 @@ mod tests {
 
     #[test]
     fn stringify_dict_simple() {
-        let mut map = std::collections::HashMap::new();
+        let mut map = IndexMap::new();
         map.insert("a".to_string(), Value::Integer(1));
         map.insert("b".to_string(), Value::Integer(2));
 
@@ -177,7 +177,7 @@ mod tests {
 
     #[test]
     fn stringify_dict_with_escaped_key_and_value() {
-        let mut map = std::collections::HashMap::new();
+        let mut map = IndexMap::new();
         map.insert(
             r#"ke"y"#.to_string(),
             Value::String(r#"va"lue"#.to_string()),
@@ -189,10 +189,10 @@ mod tests {
 
     #[test]
     fn stringify_nested_dict() {
-        let mut inner = std::collections::HashMap::new();
+        let mut inner = IndexMap::new();
         inner.insert("x".to_string(), Value::Integer(9));
 
-        let mut outer = std::collections::HashMap::new();
+        let mut outer = IndexMap::new();
         outer.insert("inner".to_string(), Value::Dictionary(inner));
 
         let v = Value::Dictionary(outer);
@@ -231,7 +231,7 @@ mod tests {
 
     #[test]
     fn display_dictionary_flat() {
-        let mut d = HashMap::new();
+        let mut d = IndexMap::new();
         d.insert("b".to_string(), Value::Integer(2));
         d.insert("a".to_string(), Value::Integer(1));
 
@@ -241,11 +241,11 @@ mod tests {
 
     #[test]
     fn display_dictionary_nested() {
-        let mut inner = HashMap::new();
+        let mut inner = IndexMap::new();
         inner.insert("x".to_string(), Value::Integer(5));
         let inner_dict = Value::Dictionary(inner);
 
-        let mut outer = HashMap::new();
+        let mut outer = IndexMap::new();
         outer.insert("inner".to_string(), inner_dict);
 
         let v = Value::Dictionary(outer);
