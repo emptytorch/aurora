@@ -72,10 +72,14 @@ impl std::fmt::Display for RuntimeError {
     }
 }
 
-pub fn execute(input: &str, entry_name: Option<String>) -> Result<Vec<Response>, ExecutionError> {
-    let file = validator::validate(input)?;
+pub fn execute(
+    input: &str,
+    entry_name: Option<String>,
+    external_vars: &HashMap<String, String>,
+) -> Result<Vec<Response>, ExecutionError> {
+    let file = validator::validate(input, external_vars)?;
     let mut machine = Machine::new();
-    machine.execute(file, entry_name)
+    machine.execute(file, entry_name, external_vars)
 }
 
 struct Machine {
@@ -95,7 +99,13 @@ impl<'input> Machine {
         &mut self,
         source_file: SourceFile<'input>,
         entry_name: Option<String>,
+        external_vars: &HashMap<String, String>,
     ) -> Result<Vec<Response>, ExecutionError> {
+        for (name, value) in external_vars {
+            self.names
+                .insert(name.clone(), Value::String(value.clone()));
+        }
+
         for konst in source_file.globals.values() {
             let value = self.eval_expr(&konst.expr)?;
             self.names.insert(konst.name.text.to_string(), value);

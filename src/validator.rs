@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use indexmap::{IndexMap, map};
 
 use crate::{
@@ -8,22 +10,27 @@ use crate::{
     validated::{self},
 };
 
-pub fn validate<'input>(input: &'input str) -> Result<validated::SourceFile<'input>, Diagnostic> {
+pub fn validate<'vars, 'input>(
+    input: &'input str,
+    external_vars: &'vars HashMap<String, String>,
+) -> Result<validated::SourceFile<'input>, Diagnostic> {
     let items = parser::parse(input)?;
-    let validator = Validator::new();
+    let validator = Validator::new(external_vars);
     validator.validate(items)
 }
 
-struct Validator<'input> {
+struct Validator<'vars, 'input> {
     globals: IndexMap<&'input str, validated::Const<'input>>,
     entries: IndexMap<&'input str, validated::Entry<'input>>,
+    external_vars: &'vars HashMap<String, String>,
 }
 
-impl<'input> Validator<'input> {
-    fn new() -> Self {
+impl<'vars, 'input> Validator<'vars, 'input> {
+    fn new(external_vars: &'vars HashMap<String, String>) -> Self {
         Self {
             globals: IndexMap::new(),
             entries: IndexMap::new(),
+            external_vars,
         }
     }
 
@@ -59,6 +66,17 @@ impl<'input> Validator<'input> {
                     }
                 }
                 ast::ItemKind::Const(name, expr) => {
+                    if self.external_vars.contains_key(name.text) {
+                        return Err(Diagnostic::error(
+                            format!("The variable `{}` is defined multiple times", name.text),
+                            name.span,
+                        )
+                        .primary_label(
+                            "I have already seen a variable with this name as a command line argument",
+                            Level::Error,
+                        ));
+                    }
+
                     let validated_expr = self.validate_expr(expr)?;
                     match self.globals.entry(name.text) {
                         map::Entry::Occupied(occupied) => {
@@ -298,6 +316,12 @@ impl<'input> Validator<'input> {
                         kind: validated::ExprKind::NameRef(name.to_string()),
                         span: konst.expr.span,
                         ty: konst.expr.ty.clone(),
+                    })
+                } else if self.external_vars.contains_key(name) {
+                    Ok(validated::Expr {
+                        kind: validated::ExprKind::NameRef(name.to_string()),
+                        span: expr.span,
+                        ty: validated::Ty::String,
                     })
                 } else {
                     Err(Diagnostic::error("Unknown identifier", expr.span)
