@@ -18,11 +18,9 @@ impl std::fmt::Display for Value {
             Value::Float(fl) => write!(f, "{fl}"),
             Value::Null => write!(f, "null"),
             Value::Dictionary(d) => {
-                let mut keys: Vec<&String> = d.keys().collect();
-                keys.sort();
-                let inner = keys
+                let inner = d
                     .iter()
-                    .map(|k| format!("{}: {}", k, d[*k]))
+                    .map(|(k, v)| format!("{}: {}", k, v))
                     .collect::<Vec<_>>()
                     .join(", ");
                 write!(f, "{{{}}}", inner)
@@ -234,7 +232,7 @@ mod tests {
         d.insert("a".to_string(), Value::Integer(1));
 
         let v = Value::Dictionary(d);
-        assert_eq!(format!("{}", v), "{a: 1, b: 2}");
+        assert_eq!(format!("{}", v), "{b: 2, a: 1}");
     }
 
     #[test]
