@@ -7,6 +7,7 @@ use anyhow::Context;
 use clap::{Parser, Subcommand};
 
 mod ast;
+mod client;
 mod diagnostic;
 mod lexer;
 mod machine;

@@ -1,13 +1,22 @@
-use std::{collections::HashMap, str::FromStr};
+use std::collections::HashMap;
 
 use indexmap::IndexMap;
 
 use crate::{
+    client::{HttpClient, ReqwestHttpClient},
     diagnostic::Diagnostic,
     validated::{Entry, Expr, ExprKind, HttpMethod, SourceFile, TemplatePart},
     validator,
     value::Value,
 };
+
+#[derive(Debug)]
+pub struct Request {
+    pub method: HttpMethod,
+    pub url: String,
+    pub headers: Vec<(String, String)>,
+    pub body: Option<String>,
+}
 
 #[derive(Debug)]
 pub struct Response {
@@ -18,6 +27,12 @@ pub struct Response {
 
 #[derive(Debug, Clone, Copy)]
 pub struct StatusCode(u16);
+
+impl From<u16> for StatusCode {
+    fn from(value: u16) -> Self {
+        StatusCode(value)
+    }
+}
 
 impl StatusCode {
     pub fn is_success(self) -> bool {
@@ -78,20 +93,21 @@ pub fn execute(
     external_vars: &HashMap<String, String>,
 ) -> Result<Vec<Response>, ExecutionError> {
     let file = validator::validate(input, external_vars)?;
-    let mut machine = Machine::new();
+    let client = ReqwestHttpClient::new();
+    let mut machine = Machine::new(client);
     machine.execute(file, entry_name, external_vars)
 }
 
-struct Machine {
+struct Machine<C: HttpClient> {
     names: HashMap<String, Value>,
-    client: reqwest::blocking::Client,
+    client: C,
 }
 
-impl<'input> Machine {
-    fn new() -> Self {
+impl<'input, C: HttpClient> Machine<C> {
+    fn new(client: C) -> Self {
         Self {
             names: HashMap::new(),
-            client: reqwest::blocking::Client::new(),
+            client,
         }
     }
 
@@ -147,49 +163,30 @@ impl<'input> Machine {
         };
 
         let url = self.eval_expr(&request.url)?;
-        let mut req = match request.method {
-            HttpMethod::Get => self.client.get(url.string()),
-            HttpMethod::Post => self.client.post(url.string()),
-            HttpMethod::Put => self.client.put(url.string()),
-            HttpMethod::Patch => self.client.patch(url.string()),
-            HttpMethod::Delete => self.client.delete(url.string()),
-        };
 
+        let mut headers = vec![];
         if let Some(expr) = &entry.headers {
             let value = self.eval_expr(expr)?;
-            let headers = self.map_headers(value.dictionary());
-            req = req.headers(headers);
+            for (k, v) in value.dictionary() {
+                headers.push((k.clone(), v.string().to_string()));
+            }
         }
 
-        if let Some(body) = &entry.body {
-            let value = self.eval_expr(body)?;
-            req = req.body(value.to_json().to_string());
-        }
+        let body = if let Some(expr) = &entry.body {
+            Some(self.eval_expr(expr)?.to_json().to_string())
+        } else {
+            None
+        };
 
-        // TODO: error handling
-        let response = req.send().unwrap();
-        Ok(Some(Response {
-            status: StatusCode(response.status().as_u16()),
-            headers: response
-                .headers()
-                .iter()
-                .map(|(name, value)| (name.to_string(), value.to_str().unwrap().to_string()))
-                .collect(),
-            // TODO: error handling
-            body: response.bytes().unwrap().to_vec(),
-        }))
-    }
+        let request = Request {
+            method: request.method,
+            url: url.string().to_string(),
+            headers,
+            body,
+        };
 
-    fn map_headers(&self, dictionary: &IndexMap<String, Value>) -> reqwest::header::HeaderMap {
-        let mut header_map = reqwest::header::HeaderMap::with_capacity(dictionary.len());
-        // TODO: error handling
-        for (k, v) in dictionary {
-            header_map.insert(
-                reqwest::header::HeaderName::from_str(k).unwrap(),
-                reqwest::header::HeaderValue::from_str(v.string()).unwrap(),
-            );
-        }
-        header_map
+        let response = self.client.send(request);
+        Ok(Some(response))
     }
 
     fn eval_expr(&self, expr: &Expr) -> Result<Value, ExecutionError> {
