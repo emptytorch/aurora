@@ -254,16 +254,15 @@ pub enum ExprKind<'input> {
 
 #[derive(Debug, Clone)]
 pub enum TemplatePart<'input> {
-    Literal(&'input str),
+    Literal(&'input str, Span),
     Expr(Expr<'input>),
 }
 
 impl<'input> TemplatePart<'input> {
     pub fn dump<W: fmt::Write>(&self, w: &mut W, indent: usize) -> fmt::Result {
         match self {
-            TemplatePart::Literal(lit) => {
-                // TODO: span
-                writeind!(w, indent, "Literal@{}..{} {}", 0, 0, lit)
+            TemplatePart::Literal(lit, span) => {
+                writeind!(w, indent, "Literal@{}..{} {}", span.start, span.end, lit)
             }
             TemplatePart::Expr(expr) => expr.dump(w, indent),
         }

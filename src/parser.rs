@@ -231,8 +231,8 @@ impl<'input> Parser<'input> {
                 let mut ast_parts = vec![];
                 for part in parts {
                     match part {
-                        token::TemplatePart::Literal(s) => {
-                            ast_parts.push(TemplatePart::Literal(s));
+                        token::TemplatePart::Literal(s, span) => {
+                            ast_parts.push(TemplatePart::Literal(s, span));
                         }
                         token::TemplatePart::Code(tokens) => {
                             let mut parser = Parser::new(tokens);

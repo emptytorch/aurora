@@ -265,7 +265,7 @@ impl<'vars, 'input> Validator<'vars, 'input> {
                 let mut validated_parts = vec![];
                 for part in parts {
                     match part {
-                        ast::TemplatePart::Literal(raw) => {
+                        ast::TemplatePart::Literal(raw, _) => {
                             let unescaped = unescape_string(raw, expr.span)?;
                             validated_parts.push(validated::TemplatePart::Literal(unescaped));
                         }

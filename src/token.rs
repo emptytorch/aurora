@@ -62,7 +62,7 @@ pub enum Delim {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TemplatePart<'input> {
-    Literal(&'input str),
+    Literal(&'input str, Span),
     Code(Vec<Token<'input>>),
 }
 

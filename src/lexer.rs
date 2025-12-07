@@ -81,6 +81,7 @@ impl<'input> Lexer<'input> {
                     if chunk_start < self.pos - 1 {
                         parts.push(TemplatePart::Literal(
                             &self.input[chunk_start..self.pos - 1],
+                            Span::new(chunk_start, self.pos - 1),
                         ));
                     }
                     return Ok(TokenKind::String(parts));
@@ -90,6 +91,7 @@ impl<'input> Lexer<'input> {
                     if chunk_start < self.pos - 1 {
                         parts.push(TemplatePart::Literal(
                             &self.input[chunk_start..self.pos - 1],
+                            Span::new(chunk_start, self.pos - 1),
                         ));
                     }
 
@@ -563,7 +565,7 @@ mod test {
         assert_token(
             r#""foo""#,
             Token {
-                kind: TokenKind::String(vec![TemplatePart::Literal("foo")]),
+                kind: TokenKind::String(vec![TemplatePart::Literal("foo", Span::new(1, 4))]),
                 span: Span::new(0, 5),
                 skipped_newline: false,
             },
@@ -575,7 +577,10 @@ mod test {
         assert_token(
             r#""foo \"bar\"!""#,
             Token {
-                kind: TokenKind::String(vec![TemplatePart::Literal(r#"foo \"bar\"!"#)]),
+                kind: TokenKind::String(vec![TemplatePart::Literal(
+                    r#"foo \"bar\"!"#,
+                    Span::new(1, 13),
+                )]),
                 span: Span::new(0, 14),
                 skipped_newline: false,
             },
@@ -587,7 +592,10 @@ mod test {
         assert_token(
             r#""foo\\bar""#,
             Token {
-                kind: TokenKind::String(vec![TemplatePart::Literal(r#"foo\\bar"#)]),
+                kind: TokenKind::String(vec![TemplatePart::Literal(
+                    r#"foo\\bar"#,
+                    Span::new(1, 9),
+                )]),
                 span: Span::new(0, 10),
                 skipped_newline: false,
             },
@@ -616,7 +624,7 @@ mod test {
             r#""foo{{bar}}""#,
             Token {
                 kind: TokenKind::String(vec![
-                    TemplatePart::Literal("foo"),
+                    TemplatePart::Literal("foo", Span::new(1, 4)),
                     TemplatePart::Code(vec![Token {
                         kind: TokenKind::Identifier("bar"),
                         span: Span::new(6, 9),
@@ -640,7 +648,7 @@ mod test {
                         span: Span::new(3, 6),
                         skipped_newline: false,
                     }]),
-                    TemplatePart::Literal("bar"),
+                    TemplatePart::Literal("bar", Span::new(8, 11)),
                 ]),
                 span: Span::new(0, 12),
                 skipped_newline: false,
@@ -654,13 +662,13 @@ mod test {
             r#""foo{{bar}}baz""#,
             Token {
                 kind: TokenKind::String(vec![
-                    TemplatePart::Literal("foo"),
+                    TemplatePart::Literal("foo", Span::new(1, 4)),
                     TemplatePart::Code(vec![Token {
                         kind: TokenKind::Identifier("bar"),
                         span: Span::new(6, 9),
                         skipped_newline: false,
                     }]),
-                    TemplatePart::Literal("baz"),
+                    TemplatePart::Literal("baz", Span::new(11, 14)),
                 ]),
                 span: Span::new(0, 15),
                 skipped_newline: false,
@@ -822,7 +830,10 @@ GET "example.com/""#,
                     skipped_newline: false,
                 },
                 Token {
-                    kind: TokenKind::String(vec![TemplatePart::Literal("example.com/")]),
+                    kind: TokenKind::String(vec![TemplatePart::Literal(
+                        "example.com/",
+                        Span::new(5, 17),
+                    )]),
                     span: Span::new(4, 18),
                     skipped_newline: false,
                 },
@@ -832,7 +843,10 @@ GET "example.com/""#,
                     skipped_newline: true,
                 },
                 Token {
-                    kind: TokenKind::String(vec![TemplatePart::Literal("example.com/")]),
+                    kind: TokenKind::String(vec![TemplatePart::Literal(
+                        "example.com/",
+                        Span::new(24, 36),
+                    )]),
                     span: Span::new(23, 37),
                     skipped_newline: false,
                 },
@@ -853,7 +867,10 @@ GET "example.com/""#,
                     skipped_newline: true,
                 },
                 Token {
-                    kind: TokenKind::String(vec![TemplatePart::Literal("example.com/")]),
+                    kind: TokenKind::String(vec![TemplatePart::Literal(
+                        "example.com/",
+                        Span::new(26, 38),
+                    )]),
                     span: Span::new(25, 39),
                     skipped_newline: false,
                 },
@@ -878,7 +895,10 @@ GET "example.com/"
                     skipped_newline: true,
                 },
                 Token {
-                    kind: TokenKind::String(vec![TemplatePart::Literal("example.com/")]),
+                    kind: TokenKind::String(vec![TemplatePart::Literal(
+                        "example.com/",
+                        Span::new(31, 43),
+                    )]),
                     span: Span::new(30, 44),
                     skipped_newline: false,
                 },
