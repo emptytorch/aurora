@@ -52,8 +52,33 @@ impl Response {
     }
 }
 
+#[derive(Debug)]
+pub enum HttpError {
+    InvalidUrl(String),
+    InvalidHeaderName(String),
+    InvalidHeaderValue(String),
+    Connection(String),
+    Timeout,
+    Transport(String),
+    BodyRead(String),
+}
+
+impl std::fmt::Display for HttpError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            HttpError::InvalidUrl(url) => write!(f, "invalid URL: `{url}`"),
+            HttpError::InvalidHeaderName(name) => write!(f, "invalid header name: `{name}`"),
+            HttpError::InvalidHeaderValue(value) => write!(f, "invalid header value: `{value}`"),
+            HttpError::Connection(msg) => write!(f, "connection error: {msg}"),
+            HttpError::Timeout => write!(f, "request timed out"),
+            HttpError::Transport(msg) => write!(f, "transport error: {msg}"),
+            HttpError::BodyRead(msg) => write!(f, "failed to read response body: {msg}"),
+        }
+    }
+}
+
 pub trait HttpClient {
-    fn send(&self, request: Request) -> Response;
+    fn send(&self, request: Request) -> Result<Response, HttpError>;
 }
 
 pub struct ReqwestHttpClient {
@@ -69,7 +94,7 @@ impl ReqwestHttpClient {
 }
 
 impl HttpClient for ReqwestHttpClient {
-    fn send(&self, request: Request) -> Response {
+    fn send(&self, request: Request) -> Result<Response, HttpError> {
         let mut builder = match request.method {
             HttpMethod::Get => self.client.get(&request.url),
             HttpMethod::Post => self.client.post(&request.url),
@@ -80,10 +105,11 @@ impl HttpClient for ReqwestHttpClient {
 
         let mut headers = reqwest::header::HeaderMap::with_capacity(request.headers.len());
         for (k, v) in &request.headers {
-            headers.insert(
-                reqwest::header::HeaderName::from_str(k).unwrap(),
-                reqwest::header::HeaderValue::from_str(v).unwrap(),
-            );
+            let name = reqwest::header::HeaderName::from_str(k)
+                .map_err(|_| HttpError::InvalidHeaderName(k.clone()))?;
+            let value = reqwest::header::HeaderValue::from_str(v)
+                .map_err(|_| HttpError::InvalidHeaderValue(v.clone()))?;
+            headers.insert(name, value);
         }
 
         builder = builder.headers(headers);
@@ -91,17 +117,37 @@ impl HttpClient for ReqwestHttpClient {
             builder = builder.body(body);
         }
 
-        let response = builder.send().unwrap();
+        let response = builder.send().map_err(|e| {
+            if e.is_timeout() {
+                HttpError::Timeout
+            } else if e.is_connect() {
+                HttpError::Connection(e.to_string())
+            } else {
+                HttpError::Transport(e.to_string())
+            }
+        })?;
+
         let headers = response
             .headers()
             .iter()
-            .map(|(k, v)| (k.to_string(), v.to_str().unwrap().to_string()))
-            .collect();
+            .map(|(k, v)| {
+                let value = v.to_str().map_err(|_| {
+                    HttpError::InvalidHeaderValue(format!("{}: invalid UTF-8", k.to_string()))
+                })?;
+                Ok((k.to_string(), value.to_string()))
+            })
+            .collect::<Result<Vec<_>, HttpError>>()?;
 
-        Response {
-            status: StatusCode::from(response.status().as_u16()),
+        let status = StatusCode::from(response.status().as_u16());
+        let body = response
+            .bytes()
+            .map_err(|e| HttpError::BodyRead(e.to_string()))?
+            .to_vec();
+
+        Ok(Response {
+            status,
             headers,
-            body: response.bytes().unwrap().to_vec(),
-        }
+            body,
+        })
     }
 }

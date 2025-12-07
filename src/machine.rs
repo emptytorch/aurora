@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use indexmap::IndexMap;
 
 use crate::{
-    client::{HttpClient, Request, ReqwestHttpClient, Response},
+    client::{HttpClient, HttpError, Request, ReqwestHttpClient, Response},
     diagnostic::Diagnostic,
     validated::{Entry, Expr, ExprKind, SourceFile, TemplatePart},
     validator,
@@ -14,11 +14,18 @@ use crate::{
 pub enum ExecutionError {
     Diagnostic(Diagnostic),
     Runtime(RuntimeError),
+    Transport(HttpError),
 }
 
 impl From<Diagnostic> for ExecutionError {
     fn from(value: Diagnostic) -> Self {
         ExecutionError::Diagnostic(value)
+    }
+}
+
+impl From<HttpError> for ExecutionError {
+    fn from(value: HttpError) -> Self {
+        ExecutionError::Transport(value)
     }
 }
 
@@ -135,7 +142,7 @@ impl<'input, C: HttpClient> Machine<C> {
             body,
         };
 
-        let response = self.client.send(request);
+        let response = self.client.send(request)?;
         Ok(Some(response))
     }
 
