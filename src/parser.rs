@@ -31,7 +31,14 @@ impl<'input> Parser<'input> {
             let item = self.parse_item()?;
             items.push(item);
         }
-        Ok(SourceFile { items })
+
+        let span = if let (Some(first), Some(last)) = (items.first(), items.last()) {
+            first.span.to(last.span)
+        } else {
+            Span::new(0, 0)
+        };
+
+        Ok(SourceFile { items, span })
     }
 
     fn parse_item(&mut self) -> Result<Item<'input>, Diagnostic> {

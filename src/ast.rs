@@ -3,6 +3,7 @@ use crate::span::Span;
 #[derive(Debug, Clone)]
 pub struct SourceFile<'input> {
     pub items: Vec<Item<'input>>,
+    pub span: Span,
 }
 
 #[derive(Debug, Clone)]
