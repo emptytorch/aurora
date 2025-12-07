@@ -1,6 +1,11 @@
 use crate::span::Span;
 
 #[derive(Debug, Clone)]
+pub struct SourceFile<'input> {
+    pub items: Vec<Item<'input>>,
+}
+
+#[derive(Debug, Clone)]
 pub struct Item<'input> {
     pub kind: ItemKind<'input>,
     pub span: Span,

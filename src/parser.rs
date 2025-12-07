@@ -1,7 +1,7 @@
 use crate::{
     ast::{
         DictionaryField, Entry, EntryItem, EntryItemKind, Expr, ExprKind, HttpMethod, Item,
-        ItemKind, Name, Request, TemplatePart,
+        ItemKind, Name, Request, SourceFile, TemplatePart,
     },
     diagnostic::{Diagnostic, Level},
     lexer,
@@ -9,7 +9,7 @@ use crate::{
     token::{self, Delim, Keyword, Token, TokenKind},
 };
 
-pub fn parse<'input>(input: &'input str) -> Result<Vec<Item<'input>>, Diagnostic> {
+pub fn parse<'input>(input: &'input str) -> Result<SourceFile<'input>, Diagnostic> {
     let tokens = lexer::lex(input)?;
     let mut parser = Parser::new(tokens);
     parser.parse()
@@ -25,13 +25,13 @@ impl<'input> Parser<'input> {
         Self { tokens, pos: 0 }
     }
 
-    fn parse(&mut self) -> Result<Vec<Item<'input>>, Diagnostic> {
+    fn parse(&mut self) -> Result<SourceFile<'input>, Diagnostic> {
         let mut items = vec![];
         while self.peek().is_some() {
             let item = self.parse_item()?;
             items.push(item);
         }
-        Ok(items)
+        Ok(SourceFile { items })
     }
 
     fn parse_item(&mut self) -> Result<Item<'input>, Diagnostic> {

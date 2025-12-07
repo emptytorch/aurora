@@ -14,9 +14,9 @@ pub fn validate<'vars, 'input>(
     input: &'input str,
     external_vars: &'vars HashMap<String, String>,
 ) -> Result<validated::SourceFile<'input>, Diagnostic> {
-    let items = parser::parse(input)?;
+    let file = parser::parse(input)?;
     let validator = Validator::new(external_vars);
-    validator.validate(items)
+    validator.validate(file)
 }
 
 struct Validator<'vars, 'input> {
@@ -36,9 +36,9 @@ impl<'vars, 'input> Validator<'vars, 'input> {
 
     fn validate(
         mut self,
-        items: Vec<ast::Item<'input>>,
+        file: ast::SourceFile<'input>,
     ) -> Result<validated::SourceFile<'input>, Diagnostic> {
-        for item in items {
+        for item in file.items {
             match item.kind {
                 ast::ItemKind::Entry(entry) => {
                     let entry_name = entry.name;
