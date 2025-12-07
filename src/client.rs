@@ -1,9 +1,56 @@
 use std::str::FromStr;
 
-use crate::{
-    machine::{Request, Response, StatusCode},
-    validated::HttpMethod,
-};
+use crate::validated::HttpMethod;
+
+#[derive(Debug)]
+pub struct Request {
+    pub method: HttpMethod,
+    pub url: String,
+    pub headers: Vec<(String, String)>,
+    pub body: Option<String>,
+}
+
+#[derive(Debug)]
+pub struct Response {
+    pub status: StatusCode,
+    pub headers: Vec<(String, String)>,
+    pub body: Vec<u8>,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct StatusCode(u16);
+
+impl From<u16> for StatusCode {
+    fn from(value: u16) -> Self {
+        StatusCode(value)
+    }
+}
+
+impl StatusCode {
+    pub fn is_success(self) -> bool {
+        (200..300).contains(&self.0)
+    }
+}
+
+impl Response {
+    pub fn pretty_body(&self) -> String {
+        let content_type = self
+            .headers
+            .iter()
+            .find(|(n, _)| n.eq_ignore_ascii_case("Content-Type"))
+            .map(|(_, v)| v.as_str())
+            .unwrap_or_default();
+
+        let body_str = String::from_utf8_lossy(&self.body);
+        if content_type.contains("application/json") {
+            return serde_json::from_str::<serde_json::Value>(&body_str)
+                .map(|v| serde_json::to_string_pretty(&v).unwrap_or_else(|_| body_str.to_string()))
+                .unwrap_or_else(|_| body_str.to_string());
+        }
+
+        body_str.to_string()
+    }
+}
 
 pub trait HttpClient {
     fn send(&self, request: Request) -> Response;
