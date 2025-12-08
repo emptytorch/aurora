@@ -485,3 +485,22 @@ impl<'input> Parser<'input> {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::fs;
+
+    #[test]
+    fn parser_snapshots() {
+        insta::glob!("test_data/parser/*.au", |path| {
+            let input = fs::read_to_string(path).unwrap();
+            let ast = crate::parser::parse(&input).unwrap();
+
+            let mut pretty_ast = String::new();
+            ast.dump(&mut pretty_ast, 0).unwrap();
+
+            let name = path.file_name().unwrap().to_string_lossy().to_string();
+            insta::assert_snapshot!(name, pretty_ast);
+        });
+    }
+}
