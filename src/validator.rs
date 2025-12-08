@@ -381,25 +381,14 @@ impl<'vars, 'input> Validator<'vars, 'input> {
     }
 
     fn infer_array_type(&self, elements: &[validated::Expr]) -> validated::Ty {
-        let mut unique_types = vec![];
-        for elem in elements.iter() {
-            let ty = elem.ty.clone();
-            if !unique_types.contains(&ty) {
-                unique_types.push(ty);
-            }
-        }
-
-        match unique_types.len() {
-            0 => validated::Ty::Unknown,
-            1 => unique_types.pop().unwrap(),
-            _ => self.make_union_ty(unique_types),
-        }
+        let types = elements.iter().map(|it| it.ty.clone()).collect();
+        self.merge_types(types)
     }
 
-    fn make_union_ty(&self, tys: Vec<validated::Ty>) -> validated::Ty {
+    fn merge_types(&self, types: Vec<validated::Ty>) -> validated::Ty {
         let mut flat = vec![];
 
-        for ty in tys {
+        for ty in types {
             match ty {
                 validated::Ty::Union(inner) => {
                     for inner_ty in inner {
