@@ -1,0 +1,10 @@
+---
+source: src/parser.rs
+expression: pretty_ast
+input_file: src/test_data/parser/multiple_empty_entries.au
+---
+SourceFile@0..39
+ Entry@0..19
+  Name@6..16 EntryName1
+ Entry@20..39
+  Name@26..36 EntryName2

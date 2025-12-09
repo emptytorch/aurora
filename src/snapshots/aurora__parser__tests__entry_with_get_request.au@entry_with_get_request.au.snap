@@ -1,0 +1,12 @@
+---
+source: src/parser.rs
+expression: pretty_ast
+input_file: src/test_data/parser/entry_with_get_request.au
+---
+SourceFile@0..33
+ Entry@0..33
+  Name@6..15 EntryName
+   Request@22..31
+    GET
+    StringLiteral@26..31
+     Literal@27..30 url
