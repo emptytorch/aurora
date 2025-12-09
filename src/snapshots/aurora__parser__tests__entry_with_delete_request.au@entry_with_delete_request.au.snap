@@ -6,7 +6,7 @@ input_file: src/test_data/parser/entry_with_delete_request.au
 SourceFile@0..36
  Entry@0..36
   Name@6..15 EntryName
-   Request@22..34
-    DELETE
-    StringLiteral@29..34
-     Literal@30..33 url
+  Request@22..34
+   DELETE
+   StringLiteral@29..34
+    Literal@30..33 url

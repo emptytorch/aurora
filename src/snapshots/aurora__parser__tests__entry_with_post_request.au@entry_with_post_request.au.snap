@@ -6,7 +6,7 @@ input_file: src/test_data/parser/entry_with_post_request.au
 SourceFile@0..34
  Entry@0..34
   Name@6..15 EntryName
-   Request@22..32
-    POST
-    StringLiteral@27..32
-     Literal@28..31 url
+  Request@22..32
+   POST
+   StringLiteral@27..32
+    Literal@28..31 url

@@ -68,7 +68,7 @@ impl<'input> Entry<'input> {
     pub fn dump<W: fmt::Write>(&self, w: &mut W, indent: usize) -> fmt::Result {
         self.name.dump(w, indent)?;
         for item in &self.body {
-            item.dump(w, indent + 1)?;
+            item.dump(w, indent)?;
         }
         Ok(())
     }
