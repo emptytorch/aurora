@@ -488,19 +488,54 @@ impl<'input> Parser<'input> {
 
 #[cfg(test)]
 mod tests {
-    use std::fs;
+    use std::{
+        fs,
+        path::{Path, PathBuf},
+    };
+
+    use expect_test::expect_file;
+
+    use crate::parser;
 
     #[test]
-    fn parser_snapshots() {
-        insta::glob!("test_data/parser/*.au", |path| {
-            let input = fs::read_to_string(path).unwrap();
-            let ast = crate::parser::parse(&input).unwrap();
+    fn parse() {
+        for case in test_cases() {
+            let input = fs::read_to_string(&case.au_path)
+                .unwrap_or_else(|_| panic!("could not read file `{}`", case.au_path.display()));
+
+            let ast = parser::parse(&input).unwrap_or_else(|e| {
+                panic!("Could not parse `{}`: {:?}", case.au_path.display(), e)
+            });
 
             let mut pretty_ast = String::new();
             ast.dump(&mut pretty_ast, 0).unwrap();
 
-            let name = path.file_name().unwrap().to_string_lossy().to_string();
-            insta::assert_snapshot!(name, pretty_ast);
-        });
+            expect_file![&case.ast_path].assert_eq(&pretty_ast);
+        }
+    }
+
+    fn test_cases() -> Vec<TestCase> {
+        let crate_root_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+        let dir = crate_root_dir.join("test_data/parser");
+
+        let mut cases = vec![];
+        let read_dir =
+            fs::read_dir(&dir).unwrap_or_else(|_| panic!("could not read dir `{}`", dir.display()));
+        for file in read_dir {
+            let file = file.unwrap();
+            let path = file.path();
+            if path.extension().unwrap_or_default() == "au" {
+                let au_path = path;
+                let ast_path = au_path.with_extension("ast");
+                cases.push(TestCase { au_path, ast_path });
+            }
+        }
+
+        cases
+    }
+
+    struct TestCase {
+        au_path: PathBuf,
+        ast_path: PathBuf,
     }
 }

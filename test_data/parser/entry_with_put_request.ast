@@ -1,8 +1,3 @@
----
-source: src/parser.rs
-expression: pretty_ast
-input_file: src/test_data/parser/entry_with_put_request.au
----
 SourceFile@0..33
  Entry@0..33
   Name@6..15 EntryName
