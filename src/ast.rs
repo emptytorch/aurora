@@ -16,13 +16,7 @@ pub struct SourceFile<'input> {
 
 impl<'input> SourceFile<'input> {
     pub fn dump<W: fmt::Write>(&self, w: &mut W, indent: usize) -> fmt::Result {
-        writeind!(
-            w,
-            indent,
-            "SourceFile@{}..{}",
-            self.span.start,
-            self.span.end
-        )?;
+        writeind!(w, indent, "SourceFile@{}", self.span)?;
         for item in &self.items {
             item.dump(w, indent + 1)?;
         }
@@ -40,11 +34,11 @@ impl<'input> Item<'input> {
     pub fn dump<W: fmt::Write>(&self, w: &mut W, indent: usize) -> fmt::Result {
         match &self.kind {
             ItemKind::Entry(entry) => {
-                writeind!(w, indent, "Entry@{}..{}", self.span.start, self.span.end)?;
+                writeind!(w, indent, "Entry@{}", self.span)?;
                 entry.dump(w, indent + 1)
             }
             ItemKind::Const(name, expr) => {
-                writeind!(w, indent, "Const@{}..{}", self.span.start, self.span.end)?;
+                writeind!(w, indent, "Const@{}", self.span)?;
                 name.dump(w, indent + 1)?;
                 expr.dump(w, indent + 1)
             }
@@ -84,11 +78,11 @@ impl<'input> EntryItem<'input> {
     pub fn dump<W: fmt::Write>(&self, w: &mut W, indent: usize) -> fmt::Result {
         match &self.kind {
             EntryItemKind::Request(req) => {
-                writeind!(w, indent, "Request@{}..{}", self.span.start, self.span.end)?;
+                writeind!(w, indent, "Request@{}", self.span)?;
                 req.dump(w, indent + 1)
             }
             EntryItemKind::Section(name, body) => {
-                writeind!(w, indent, "Section@{}..{}", self.span.start, self.span.end)?;
+                writeind!(w, indent, "Section@{}", self.span)?;
                 name.dump(w, indent + 1)?;
                 body.dump(w, indent + 1)
             }
@@ -110,14 +104,7 @@ pub struct Name<'input> {
 
 impl<'input> Name<'input> {
     pub fn dump<W: fmt::Write>(&self, w: &mut W, indent: usize) -> fmt::Result {
-        writeind!(
-            w,
-            indent,
-            "Name@{}..{} {}",
-            self.span.start,
-            self.span.end,
-            self.text
-        )
+        writeind!(w, indent, "Name@{} {}", self.span, self.text)
     }
 }
 
@@ -166,72 +153,33 @@ impl<'input> Expr<'input> {
     pub fn dump<W: fmt::Write>(&self, w: &mut W, indent: usize) -> fmt::Result {
         match &self.kind {
             ExprKind::NameRef(name) => {
-                writeind!(
-                    w,
-                    indent,
-                    "NameRef@{}..{} {}",
-                    self.span.start,
-                    self.span.end,
-                    name
-                )
+                writeind!(w, indent, "NameRef@{} {}", self.span, name)
             }
             ExprKind::StringLiteral(parts) => {
-                writeind!(
-                    w,
-                    indent,
-                    "StringLiteral@{}..{}",
-                    self.span.start,
-                    self.span.end
-                )?;
+                writeind!(w, indent, "StringLiteral@{}", self.span)?;
                 for part in parts {
                     part.dump(w, indent + 1)?;
                 }
                 Ok(())
             }
             ExprKind::IntegerLiteral(lit) => {
-                writeind!(
-                    w,
-                    indent,
-                    "IntegerLiteral@{}..{} {}",
-                    self.span.start,
-                    self.span.end,
-                    lit
-                )
+                writeind!(w, indent, "IntegerLiteral@{} {}", self.span, lit)
             }
             ExprKind::FloatLiteral(lit) => {
-                writeind!(
-                    w,
-                    indent,
-                    "FloatLiteral@{}..{} {}",
-                    self.span.start,
-                    self.span.end,
-                    lit
-                )
+                writeind!(w, indent, "FloatLiteral@{} {}", self.span, lit)
             }
             ExprKind::NullLiteral => {
-                writeind!(
-                    w,
-                    indent,
-                    "NullLiteral@{}..{}",
-                    self.span.start,
-                    self.span.end
-                )
+                writeind!(w, indent, "NullLiteral@{}", self.span)
             }
             ExprKind::Dictionary(fields) => {
-                writeind!(
-                    w,
-                    indent,
-                    "Dictionary@{}..{}",
-                    self.span.start,
-                    self.span.end
-                )?;
+                writeind!(w, indent, "Dictionary@{}", self.span)?;
                 for field in fields {
                     field.dump(w, indent + 1)?;
                 }
                 Ok(())
             }
             ExprKind::Array(elems) => {
-                writeind!(w, indent, "Array@{}..{}", self.span.start, self.span.end)?;
+                writeind!(w, indent, "Array@{}", self.span)?;
                 for elem in elems {
                     elem.dump(w, indent + 1)?;
                 }
@@ -262,7 +210,7 @@ impl<'input> TemplatePart<'input> {
     pub fn dump<W: fmt::Write>(&self, w: &mut W, indent: usize) -> fmt::Result {
         match self {
             TemplatePart::Literal(lit, span) => {
-                writeind!(w, indent, "Literal@{}..{} {}", span.start, span.end, lit)
+                writeind!(w, indent, "Literal@{} {}", span, lit)
             }
             TemplatePart::Expr(expr) => expr.dump(w, indent),
         }
