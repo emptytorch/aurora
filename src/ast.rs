@@ -35,7 +35,7 @@ pub struct Item<'input> {
 }
 
 impl<'input> Item<'input> {
-    pub fn dump<W: fmt::Write>(&self, w: &mut W, indent: usize) -> fmt::Result {
+    fn dump<W: fmt::Write>(&self, w: &mut W, indent: usize) -> fmt::Result {
         match &self.kind {
             ItemKind::Entry(entry) => {
                 writeind!(w, indent, "Entry@{}", self.span)?;
@@ -63,7 +63,7 @@ pub struct Entry<'input> {
 }
 
 impl<'input> Entry<'input> {
-    pub fn dump<W: fmt::Write>(&self, w: &mut W, indent: usize) -> fmt::Result {
+    fn dump<W: fmt::Write>(&self, w: &mut W, indent: usize) -> fmt::Result {
         self.name.dump(w, indent)?;
         for item in &self.body {
             item.dump(w, indent)?;
@@ -79,7 +79,7 @@ pub struct EntryItem<'input> {
 }
 
 impl<'input> EntryItem<'input> {
-    pub fn dump<W: fmt::Write>(&self, w: &mut W, indent: usize) -> fmt::Result {
+    fn dump<W: fmt::Write>(&self, w: &mut W, indent: usize) -> fmt::Result {
         match &self.kind {
             EntryItemKind::Request(req) => {
                 writeind!(w, indent, "Request@{}", self.span)?;
@@ -107,7 +107,7 @@ pub struct Name<'input> {
 }
 
 impl<'input> Name<'input> {
-    pub fn dump<W: fmt::Write>(&self, w: &mut W, indent: usize) -> fmt::Result {
+    fn dump<W: fmt::Write>(&self, w: &mut W, indent: usize) -> fmt::Result {
         writeind!(w, indent, "Name@{} {}", self.span, self.text)
     }
 }
@@ -119,7 +119,7 @@ pub struct Request<'input> {
 }
 
 impl<'input> Request<'input> {
-    pub fn dump<W: fmt::Write>(&self, w: &mut W, indent: usize) -> fmt::Result {
+    fn dump<W: fmt::Write>(&self, w: &mut W, indent: usize) -> fmt::Result {
         writeind!(w, indent, "{}", self.method)?;
         self.url.dump(w, indent)
     }
@@ -154,7 +154,7 @@ pub struct Expr<'input> {
 }
 
 impl<'input> Expr<'input> {
-    pub fn dump<W: fmt::Write>(&self, w: &mut W, indent: usize) -> fmt::Result {
+    fn dump<W: fmt::Write>(&self, w: &mut W, indent: usize) -> fmt::Result {
         match &self.kind {
             ExprKind::NameRef(name) => {
                 writeind!(w, indent, "NameRef@{} {}", self.span, name)
@@ -211,7 +211,7 @@ pub enum TemplatePart<'input> {
 }
 
 impl<'input> TemplatePart<'input> {
-    pub fn dump<W: fmt::Write>(&self, w: &mut W, indent: usize) -> fmt::Result {
+    fn dump<W: fmt::Write>(&self, w: &mut W, indent: usize) -> fmt::Result {
         match self {
             TemplatePart::Literal(lit, span) => {
                 writeind!(w, indent, "Literal@{} {}", span, lit)
@@ -228,7 +228,7 @@ pub struct DictionaryField<'input> {
 }
 
 impl<'input> DictionaryField<'input> {
-    pub fn dump<W: fmt::Write>(&self, w: &mut W, indent: usize) -> fmt::Result {
+    fn dump<W: fmt::Write>(&self, w: &mut W, indent: usize) -> fmt::Result {
         self.key.dump(w, indent)?;
         self.value.dump(w, indent)
     }
