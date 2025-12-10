@@ -508,7 +508,7 @@ mod tests {
             });
 
             let mut pretty_ast = String::new();
-            ast.dump(&mut pretty_ast, 0).unwrap();
+            ast.dump(&mut pretty_ast).unwrap();
 
             expect_file![&case.ast_path].assert_eq(&pretty_ast);
         }

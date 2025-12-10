@@ -15,7 +15,11 @@ pub struct SourceFile<'input> {
 }
 
 impl<'input> SourceFile<'input> {
-    pub fn dump<W: fmt::Write>(&self, w: &mut W, indent: usize) -> fmt::Result {
+    pub fn dump<W: fmt::Write>(&self, w: &mut W) -> fmt::Result {
+        self.dump_internal(w, 0)
+    }
+
+    fn dump_internal<W: fmt::Write>(&self, w: &mut W, indent: usize) -> fmt::Result {
         writeind!(w, indent, "SourceFile@{}", self.span)?;
         for item in &self.items {
             item.dump(w, indent + 1)?;
