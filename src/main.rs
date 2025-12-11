@@ -74,7 +74,11 @@ fn run(path: &Path, entry: Option<String>, vars: Vec<(String, String)>) -> anyho
             }
         }
         Err(err) => match err {
-            machine::ExecutionError::Diagnostic(d) => diagnostic::dump(&input, path, &d),
+            machine::ExecutionError::Diagnostic(d) => {
+                let mut buf = String::new();
+                diagnostic::dump(&input, path, &d, &mut buf)?;
+                println!("{}", buf);
+            }
             machine::ExecutionError::Runtime(e) => eprintln!("error: {e}"),
             machine::ExecutionError::Transport(e) => eprintln!("HTTP error: {e}"),
         },

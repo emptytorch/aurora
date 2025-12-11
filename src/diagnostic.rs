@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::{fmt, path::Path};
 
 use crate::span::Span;
 
@@ -52,7 +52,12 @@ impl Diagnostic {
     }
 }
 
-pub fn dump(input: &str, path: &Path, diagnostic: &Diagnostic) {
+pub fn dump<W: fmt::Write>(
+    input: &str,
+    path: &Path,
+    diagnostic: &Diagnostic,
+    w: &mut W,
+) -> fmt::Result {
     let mut annotations: Vec<annotate_snippets::Annotation> = vec![];
     let mut primary_found = false;
     for label in &diagnostic.labels {
@@ -89,5 +94,5 @@ pub fn dump(input: &str, path: &Path, diagnostic: &Diagnostic) {
         )];
     let renderer = annotate_snippets::Renderer::styled()
         .decor_style(annotate_snippets::renderer::DecorStyle::Unicode);
-    println!("{}", renderer.render(report));
+    write!(w, "{}", renderer.render(report))
 }
