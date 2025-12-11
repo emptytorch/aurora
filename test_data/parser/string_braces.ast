@@ -1,0 +1,5 @@
+SourceFile@0..31
+ Const@0..31
+  Name@6..11 VALUE
+  StringLiteral@14..31
+   Literal@15..30 foo { bar } baz

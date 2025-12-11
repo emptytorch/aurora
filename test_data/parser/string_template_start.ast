@@ -1,0 +1,6 @@
+SourceFile@0..26
+ Const@0..26
+  Name@6..11 VALUE
+  StringLiteral@14..26
+   NameRef@17..20 FOO
+   Literal@22..25 bar
