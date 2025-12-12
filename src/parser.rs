@@ -498,8 +498,8 @@ mod tests {
     use crate::parser;
 
     #[test]
-    fn parse() {
-        for case in test_cases() {
+    fn parse_ok() {
+        for case in test_cases("ok") {
             let input = fs::read_to_string(&case.au_path)
                 .unwrap_or_else(|_| panic!("could not read file `{}`", case.au_path.display()));
 
@@ -514,9 +514,10 @@ mod tests {
         }
     }
 
-    fn test_cases() -> Vec<TestCase> {
+    fn test_cases(data_dir: &str) -> Vec<TestCase> {
         let crate_root_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
-        let dir = crate_root_dir.join("test_data/parser");
+        let test_data_dir = crate_root_dir.join("test_data/parser");
+        let dir = test_data_dir.join(data_dir);
 
         let mut cases = vec![];
         let read_dir =
