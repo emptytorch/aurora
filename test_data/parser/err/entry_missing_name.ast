@@ -1,0 +1,5 @@
+error: Expected identifier
+ --> err/entry_missing_name.au:1:7
+  |
+1 | entry {}
+  |       ^ I was expecting a name here

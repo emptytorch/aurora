@@ -495,7 +495,7 @@ mod tests {
 
     use expect_test::expect_file;
 
-    use crate::parser;
+    use crate::{diagnostic, parser};
 
     #[test]
     fn parse_ok() {
@@ -511,6 +511,35 @@ mod tests {
             ast.dump(&mut pretty_ast).unwrap();
 
             expect_file![&case.ast_path].assert_eq(&pretty_ast);
+        }
+    }
+
+    #[test]
+    fn parse_err() {
+        for case in test_cases("err") {
+            let input = fs::read_to_string(&case.au_path)
+                .unwrap_or_else(|_| panic!("could not read file `{}`", case.au_path.display()));
+
+            let diag = parser::parse(&input).expect_err("parse error");
+            let filename = case.au_path.file_name().unwrap();
+            let display_path = case
+                .au_path
+                .parent()
+                .and_then(|p| p.file_name())
+                .map(|dir| Path::new(dir).join(filename))
+                .unwrap_or_else(|| filename.into());
+
+            let mut pretty_diag = String::new();
+            diagnostic::dump(
+                &input,
+                &display_path,
+                &diag,
+                diagnostic::RenderStyle::Plain,
+                &mut pretty_diag,
+            )
+            .unwrap();
+
+            expect_file![&case.ast_path].assert_eq(&pretty_diag);
         }
     }
 
