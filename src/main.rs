@@ -76,7 +76,7 @@ fn run(path: &Path, entry: Option<String>, vars: Vec<(String, String)>) -> anyho
         Err(err) => match err {
             machine::ExecutionError::Diagnostic(d) => {
                 let mut buf = String::new();
-                diagnostic::dump(&input, path, &d, &mut buf)?;
+                diagnostic::dump(&input, path, &d, diagnostic::RenderStyle::Styled, &mut buf)?;
                 println!("{}", buf);
             }
             machine::ExecutionError::Runtime(e) => eprintln!("error: {e}"),

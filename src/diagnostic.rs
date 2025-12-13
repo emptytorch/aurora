@@ -52,10 +52,17 @@ impl Diagnostic {
     }
 }
 
+#[derive(Debug, Clone, Copy)]
+pub enum RenderStyle {
+    Styled,
+    Plain,
+}
+
 pub fn dump<W: fmt::Write>(
     input: &str,
     path: &Path,
     diagnostic: &Diagnostic,
+    style: RenderStyle,
     w: &mut W,
 ) -> fmt::Result {
     let mut annotations: Vec<annotate_snippets::Annotation> = vec![];
@@ -92,7 +99,12 @@ pub fn dump<W: fmt::Write>(
                 .path(path.to_string_lossy())
                 .annotations(annotations),
         )];
-    let renderer = annotate_snippets::Renderer::styled()
-        .decor_style(annotate_snippets::renderer::DecorStyle::Unicode);
+
+    let renderer = match style {
+        RenderStyle::Styled => annotate_snippets::Renderer::styled()
+            .decor_style(annotate_snippets::renderer::DecorStyle::Unicode),
+        RenderStyle::Plain => annotate_snippets::Renderer::plain(),
+    };
+
     write!(w, "{}", renderer.render(report))
 }
