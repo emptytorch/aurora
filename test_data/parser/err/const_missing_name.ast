@@ -1,0 +1,5 @@
+error: Expected identifier
+ --> err/const_missing_name.au:1:7
+  |
+1 | const = 1
+  |       ^ I was expecting a variable name here

@@ -1,0 +1,5 @@
+error: Missing newline
+ --> err/const_missing_newline.au:1:21
+  |
+1 | const VALUE = "foo" 1
+  |                     ^ I was expecting a newline here

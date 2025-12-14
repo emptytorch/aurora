@@ -1,0 +1,5 @@
+error: Expected expression
+ --> err/const_missing_init.au:1:13
+  |
+1 | const VALUE =
+  |             ^ I was expecting an expression here

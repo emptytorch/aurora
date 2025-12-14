@@ -1,0 +1,5 @@
+error: Expected `=`
+ --> err/const_missing_eq.au:1:13
+  |
+1 | const VALUE 1
+  |             ^ here

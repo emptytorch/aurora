@@ -1,0 +1,5 @@
+error: Expected item
+ --> err/request_top_level.au:1:1
+  |
+1 | GET "foo"
+  | ^^^ I was expecting an item here
